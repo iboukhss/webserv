@@ -1,0 +1,11 @@
+BasedOnStyle: LLVM
+IndentWidth: 4
+UseTab: Never
+ColumnLimit: 100
+BreakBeforeBraces: Stroustrup
+PointerAlignment: Left
+IndentAccessModifiers: false
+AccessModifierOffset: -4
+AllowShortFunctionsOnASingleLine: InlineOnly
+BreakConstructorInitializers: BeforeColon
+PackConstructorInitializers: Never
