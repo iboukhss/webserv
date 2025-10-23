@@ -5,17 +5,21 @@
 #ifndef SERVER_H_
 #define SERVER_H_
 
+#include <cstring>
+#include <iostream>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <vector>
 
 class Server {
 public:
-    Server(int limit_conn);
+    Server(int port, int limit_conn);
     ~Server();
 
     int set_nonblocking(int fd);
     int getFd();
+    int acceptConn();
+    void sendResponse(int event_fd, const char* response);
 
 private:
     Server();
