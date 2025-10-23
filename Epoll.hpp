@@ -29,6 +29,7 @@ public:
     void add(int fd, uint32_t event);
     void remove(int fd);
     epoll_event* getEvents();
+    int getEventFd(int i);
     int wait();
 
 private:

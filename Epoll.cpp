@@ -24,6 +24,11 @@ void Epoll::remove(int fd)
     }
 }
 
+int Epoll::getEventFd(int i)
+{
+    return (events_[i].data.fd);
+}
+
 epoll_event* Epoll::getEvents()
 {
     return (events_);
