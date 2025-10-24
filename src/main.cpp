@@ -1,10 +1,10 @@
-#include "server.hpp"
+#include "Server.hpp"
 
 int main()
 {
-    Server srv;
+    Server server(INADDR_ANY, 8080);
 
-    srv.run();
+    server.run();
 
     return 0;
 }

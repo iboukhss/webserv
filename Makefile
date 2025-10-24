@@ -1,7 +1,7 @@
 CXX = clang++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98
 
-SRCS = src/main.cpp src/server.cpp
+SRCS = src/main.cpp src/Socket.cpp src/Server.cpp src/Client.cpp
 OBJS = $(SRCS:.cpp=.o)
 NAME = webserv
 
@@ -14,10 +14,10 @@ src/%.o: src/%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 clean:
-	rm -f $(OBJS)
+	rm -f src/*.o
 
 fclean: clean
-	rm -f $(NAME)
+	rm -f webserv
 
 re: fclean all
 
