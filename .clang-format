@@ -4,8 +4,24 @@ UseTab: Never
 ColumnLimit: 100
 BreakBeforeBraces: Stroustrup
 PointerAlignment: Left
+SpaceAfterCStyleCast: true
+
 IndentAccessModifiers: false
 AccessModifierOffset: -4
+
 AllowShortFunctionsOnASingleLine: InlineOnly
 BreakConstructorInitializers: BeforeColon
 PackConstructorInitializers: Never
+
+SortIncludes: true
+IncludeBlocks: Regroup
+IncludeCategories:
+  # Local headers
+  - Regex: '^".*"$'
+    Priority: 1
+  # C standard headers
+  - Regex: '^<.*\.h>$'
+    Priority: 2
+  # C++ standard headers
+  - Regex: '^<.*>$'
+    Priority: 3
