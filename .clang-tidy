@@ -11,9 +11,9 @@ CheckOptions:
 
 # snake_case functions and variables
   - key: readability-identifier-naming.FunctionCase
-    value: snake_case
+    value: lower_case
   - key: readability-identifier-naming.VariableCase
-    value: snake_case
+    value: lower_case
 
 # underscore suffix for private members (foo_)
   - key: readability-identifier-naming.PrivateMemberSuffix
