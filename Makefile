@@ -3,8 +3,8 @@ NAME = webserv
 CXX = clang++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -g3 -MMD -MP
 
-SRCS = main.cpp Epoll.cpp Server.cpp Socket.cpp Client.cpp
-HDRS = Epoll.hpp Server.hpp Socket.hpp Client.hpp
+SRCS = main.cpp Server.cpp Socket.cpp Client.cpp
+HDRS = Server.hpp Socket.hpp Client.hpp
 
 OBJS = $(SRCS:.cpp=.o)
 DEPS = $(OBJS:.o=.d)
