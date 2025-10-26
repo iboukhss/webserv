@@ -49,7 +49,7 @@ int Socket::listen(int backlog)
 Socket* Socket::accept()
 {
     sockaddr_in addr;
-    socklen_t addr_len;
+    socklen_t addr_len = sizeof(addr);
 
     int fd = ::accept(fd_, (sockaddr*) &addr, &addr_len);
     if (fd == -1) {
