@@ -22,6 +22,10 @@ public:
     int fd() const { return fd_; }
 
 private:
+    Socket(const Socket& other);
+    Socket& operator=(const Socket& other);
+
+private:
     int fd_;
     sockaddr_in addr_;
 };

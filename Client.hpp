@@ -7,8 +7,13 @@
 
 class Client {
 public:
-    Client(Socket* socket);
+    explicit Client(Socket* socket);
     ~Client();
+
+private:
+    Client();
+    Client(const Client& other);
+    Client& operator=(const Client& other);
 
 private:
     Socket* socket_;

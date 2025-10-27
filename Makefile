@@ -34,10 +34,10 @@ db:
 	compiledb -n $(MAKE)
 
 format:
-	clang-format --style=file --dry-run *.cpp *.hpp
+	clang-format -style=file -dry-run *.cpp *.hpp
 
 format-fix:
-	clang-format --style=file -i *.cpp *.hpp
+	clang-format -style=file -i *.cpp *.hpp
 
 lint:
 	clang-tidy -p=. -header-filter=.* *.cpp

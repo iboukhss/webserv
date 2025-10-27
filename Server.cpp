@@ -51,7 +51,7 @@ void Server::run()
         // poll for available connections
         // two solutions possible : wait returns n events -> either loop 0 to n in the epoll_event
         // array held by the epoll object or modify the wait function to return an array
-        int n_events = epoll_wait(epoll_fd_, events_, MAX_EVENTS, -1);
+        int n_events = epoll_wait(epoll_fd_, events_, WEBSERV_MAX_EVENTS, -1);
 
         for (int i = 0; i < n_events; ++i) {
             int event_fd = events_[i].data.fd;

@@ -14,7 +14,7 @@
 
 #include <map>
 
-#define MAX_EVENTS 10
+#define WEBSERV_MAX_EVENTS 10
 
 class Server {
 public:
@@ -29,11 +29,13 @@ public:
 
 private:
     Server();
+    Server(const Server& other);
+    Server& operator=(const Server& other);
 
 private:
     Socket socket_;
     int epoll_fd_;
-    epoll_event events_[MAX_EVENTS];
+    epoll_event events_[WEBSERV_MAX_EVENTS];
     std::map<int, Client*> clients_; // Map of clients connections
 };
 
