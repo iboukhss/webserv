@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-int main(void)
+int main(void) 
 {
     // later params retrieved from config file
     Server server(INADDR_ANY, 8080, 1000);
