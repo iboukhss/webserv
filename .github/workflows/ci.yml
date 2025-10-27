@@ -1,0 +1,24 @@
+name: CI pipeline
+
+on:
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: pipx install compiledb
+
+      - name: Run clang-format
+        run: clang-format --dry-run --Werror *.cpp *.hpp
+
+      - name: Build and generate compilation database
+        run: compiledb make
+
+      - name: Run clang-tidy
+        run: clang-tidy --header-filter=.* --warnings-as-errors=* *.cpp
