@@ -26,9 +26,9 @@ CheckOptions:
   - key: readability-identifier-naming.PrivateMemberSuffix
     value: _
 
-  # camelBack constants with k prefix (kMaxConnections)
+  # CamelCase constants with k prefix (kMaxConnections)
   - key: readability-identifier-naming.ConstantCase
-    value: camelBack
+    value: CamelCase
   - key: readability-identifier-naming.ConstantPrefix
     value: k
 

@@ -6,7 +6,7 @@ CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -g3
 CPPFLAGS = -MMD -MP
 
 SRCS = main.cpp Server.cpp Client.cpp HttpResponse.cpp SyscallError.cpp
-HDRS = Server.hpp Client.hpp HttpResponse.hpp SyscallError.hpp
+HDRS = Server.hpp Client.hpp HttpResponse.hpp SyscallError.hpp structs_dev.hpp
 
 OBJS = $(SRCS:.cpp=.o)
 DEPS = $(OBJS:.o=.d)
@@ -40,6 +40,10 @@ val:
 
 db:
 	compiledb -n $(MAKE)
+
+run: 
+	make
+	./webserv
 
 format:
 	clang-format -style=file -dry-run *.cpp *.hpp
