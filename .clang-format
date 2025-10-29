@@ -9,6 +9,7 @@ SpaceAfterCStyleCast: true
 IndentAccessModifiers: false
 AccessModifierOffset: -4
 
+AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: InlineOnly
 BreakConstructorInitializers: BeforeColon
 PackConstructorInitializers: Never

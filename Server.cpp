@@ -2,6 +2,8 @@
 
 #include "Server.hpp"
 
+#include "HttpResponse.hpp"
+
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <stdlib.h>
@@ -94,13 +96,10 @@ void Server::accept_connection()
 
 void Server::send_response(int event_fd)
 {
-    const char* response = "HTTP/1.1 200 OK\r\n"
-                           "Content-Length: 14\r\n"
-                           "Content-Type: text/plain\r\n"
-                           "\r\n"
-                           "Hello, client!\n";
+    HttpResponse res = {200, "text/plain", "Hello, client!"};
+    std::string raw = res.to_string();
 
-    send(event_fd, response, strlen(response), 0);
+    send(event_fd, raw.c_str(), raw.size(), 0);
     epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, event_fd, NULL);
     delete clients_[event_fd];
     clients_.erase(event_fd);
