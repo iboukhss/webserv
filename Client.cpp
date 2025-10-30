@@ -2,8 +2,12 @@
 
 #include "Client.hpp"
 
+#include <cstddef>
+
 Client::Client(Socket* socket)
-    : socket_(socket)
+    : socket_(socket),
+      next_(NULL),
+      prev_(NULL)
 {
 }
 

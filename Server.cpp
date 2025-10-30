@@ -22,6 +22,7 @@ Server::Server(in_addr_t ip, in_port_t port, int limit_conn)
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = htonl(ip);
+
     socket_.bind(addr);
     socket_.listen(limit_conn);
 
@@ -29,19 +30,20 @@ Server::Server(in_addr_t ip, in_port_t port, int limit_conn)
 
     std::memset(&ev, 0, sizeof(ev));
     ev.events = EPOLLIN;
-    ev.data.fd = listen_fd();
-    epoll_fd_ = epoll_create1(0);
+    ev.data.ptr = NULL;
 
+    epoll_fd_ = epoll_create1(0);
     epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, listen_fd(), &ev);
+    list_head_ = NULL;
 }
 
 Server::~Server()
 {
-    // do I need to close the socket ?
-    // not anymore :P
-
-    for (std::map<int, Client*>::iterator it = clients_.begin(); it != clients_.end(); ++it) {
-        delete it->second;
+    // Close all remaining active connections
+    while (list_head_) {
+        Client* conn = list_head_;
+        list_head_ = list_head_->next();
+        delete conn;
     }
 
     close(epoll_fd_);
@@ -50,24 +52,48 @@ Server::~Server()
 void Server::run()
 {
     while (true) {
-        // poll for available connections
-        // two solutions possible : wait returns n events -> either loop 0 to n in the epoll_event
-        // array held by the epoll object or modify the wait function to return an array
         int n_events = epoll_wait(epoll_fd_, events_, WEBSERV_MAX_EVENTS, -1);
 
         for (int i = 0; i < n_events; ++i) {
-            int event_fd = events_[i].data.fd;
+            Client* conn = (Client*) events_[i].data.ptr;
 
-            // we need to accept a new connection(s) -> there might be a queue
-            if (event_fd == listen_fd()) {
+            // We set ev.data.ptr to NULL in the constructor, so we know for
+            // sure this notification is coming from the server socket.
+            if (conn == NULL) {
                 accept_connection();
             }
-            // we need to write to a client socket
             else {
-                send_response(event_fd);
+                send_response(conn);
             }
         }
     }
+}
+
+void Server::add_connection(Client* conn)
+{
+    conn->set_next(list_head_);
+    if (list_head_) {
+        list_head_->set_prev(conn);
+    }
+    list_head_ = conn;
+}
+
+void Server::remove_connection(Client* conn)
+{
+    Client* prev = conn->prev();
+    Client* next = conn->next();
+
+    if (prev) {
+        prev->set_next(conn->next());
+    }
+    if (next) {
+        next->set_prev(conn->prev());
+    }
+    if (conn == list_head_) {
+        list_head_ = next;
+    }
+
+    delete conn;
 }
 
 // extracts the  first  connection  request  on  the  queue
@@ -84,23 +110,23 @@ void Server::accept_connection()
     client_sock->set_nonblocking();
 
     epoll_event ev;
+    Client* client = new Client(client_sock);
     int client_fd = client_sock->fd();
 
     ev.events = EPOLLIN;
-    ev.data.fd = client_fd;
+    ev.data.ptr = client;
     epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, client_fd, &ev);
 
-    // save all new connections
-    clients_[client_fd] = new Client(client_sock);
+    add_connection(client);
 }
 
-void Server::send_response(int event_fd)
+void Server::send_response(Client* conn)
 {
-    HttpResponse res = {200, "text/plain", "Hello, client!"};
+    int client_fd = conn->socket()->fd();
+    HttpResponse res = {200, "text/plain", "Hello, client!\n"};
     std::string raw = res.to_string();
 
-    send(event_fd, raw.c_str(), raw.size(), 0);
-    epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, event_fd, NULL);
-    delete clients_[event_fd];
-    clients_.erase(event_fd);
+    send(client_fd, raw.data(), raw.size(), 0);
+    epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client_fd, NULL);
+    remove_connection(conn);
 }

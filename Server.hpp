@@ -12,8 +12,6 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 
-#include <map>
-
 #define WEBSERV_MAX_EVENTS 10
 
 class Server {
@@ -22,8 +20,10 @@ public:
     ~Server();
 
     void run();
+    void add_connection(Client* conn);
+    void remove_connection(Client* conn);
     void accept_connection();
-    void send_response(int event_fd);
+    void send_response(Client* conn);
 
     int listen_fd() { return socket_.fd(); }
 
@@ -36,7 +36,7 @@ private:
     Socket socket_;
     int epoll_fd_;
     epoll_event events_[WEBSERV_MAX_EVENTS];
-    std::map<int, Client*> clients_; // Map of clients connections
+    Client* list_head_;
 };
 
 #endif // SERVER_H_

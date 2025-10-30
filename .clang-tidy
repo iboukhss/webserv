@@ -3,6 +3,7 @@ Checks:
   - 'readability-identifier-naming'
   - 'cppcoreguidelines-special-member-functions'
   - 'google-explicit-constructor'
+  - 'cppcoreguidelines-init-variables'
 
 CheckOptions:
   # CamelCase classes, types, structs and enums
