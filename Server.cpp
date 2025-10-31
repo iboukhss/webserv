@@ -66,8 +66,19 @@ Server::~Server()
 
 void Server::run()
 {
-    while (true) {
+    while (!g_sigint_received) {
         int n_events = epoll_wait(epoll_fd_, events_, WEBSERV_MAX_EVENTS, -1);
+        if (n_events == -1) {
+            switch (errno) {
+            case EINTR:
+                // epoll_wait was interrupted by a signal, just move on as if
+                // nothing happened.
+                n_events = 0;
+                break;
+            default:
+                throw SyscallError("epoll_wait", errno);
+            }
+        }
 
         for (int i = 0; i < n_events; ++i) {
             Client* conn = (Client*) events_[i].data.ptr;
