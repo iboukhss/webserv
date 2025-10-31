@@ -13,10 +13,11 @@ std::string HttpResponse::to_string() const
     default: reason = "Unknown"; break;
     }
 
-    out << "HTTP/1.1 " << status << "\r\n";
+    out << "HTTP/1.1 " << status << " " << reason << "\r\n";
     out << "Content-Type: " << content_type << "\r\n";
     out << "Content-Length: " << body.size() << "\r\n";
     out << "\r\n";
     out << body;
+
     return out.str();
 }

@@ -1,23 +1,25 @@
 NAME = webserv
 
 CXX = clang++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -g3 -MMD -MP
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -g3
+# CPPFLAGS are for C pre-processor flags (different from CXXFLAGS)
+CPPFLAGS = -MMD -MP
 
-SRCS = main.cpp Server.cpp Socket.cpp Client.cpp HttpResponse.cpp
-HDRS = Server.hpp Socket.hpp Client.hpp HttpResponse.hpp
+SRCS = main.cpp Server.cpp Client.cpp HttpResponse.cpp SyscallError.cpp
+HDRS = Server.hpp Client.hpp HttpResponse.hpp SyscallError.hpp
 
 OBJS = $(SRCS:.cpp=.o)
 DEPS = $(OBJS:.o=.d)
 
-.PHONY: all clean fclean re val db format format-fix lint lint-fix
+.PHONY: all clean fclean re val db format format-fix lint lint-fix check fix
 
 all: $(NAME)
 
 $(NAME): $(OBJS)
-	$(CXX) -o $(NAME) $(OBJS)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(OBJS) -o $(NAME)
 
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
 
 clean:
 	rm -f *.o *.d
@@ -30,6 +32,12 @@ re: fclean all
 val:
 	valgrind ./webserv
 
+# Formatting and linting section
+
+# If compiledb is not installed do `pipx install compiledb`.
+# compiledb is used to generate the compilation database (compile_commands.json)
+# used by clang-tidy.
+
 db:
 	compiledb -n $(MAKE)
 
@@ -39,13 +47,16 @@ format:
 format-fix:
 	clang-format -style=file -i *.cpp *.hpp
 
-lint:
+lint: db
 	clang-tidy -p=. -header-filter=.* *.cpp
 
-lint-fix:
+lint-fix: db
 	clang-tidy -p=. -header-filter=.* -fix *.cpp
 
 check: format lint
+
+# Careful, these rules will overwrite files.
+# Make sure to use `make check` before committing irreversible changes.
 
 fix: format-fix lint-fix
 

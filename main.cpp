@@ -1,6 +1,7 @@
 
 
 #include "Server.hpp"
+#include "SyscallError.hpp"
 
 #include <iostream>
 
@@ -12,8 +13,9 @@ int main(void)
     try {
         server.run();
     }
-    catch (const std::exception& e) {
+    catch (const SyscallError& e) {
         std::cerr << e.what() << std::endl;
+        return e.code();
     }
     return 0;
 }

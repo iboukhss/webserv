@@ -1,9 +1,9 @@
-
-
 #include "Server.hpp"
 
 #include "HttpResponse.hpp"
+#include "SyscallError.hpp"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <stdlib.h>
@@ -13,40 +13,55 @@
 
 #include <cstring>
 
-Server::Server(in_addr_t ip, in_port_t port, int limit_conn)
-    : socket_(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)
+// NOTE: This constructor is NOT exception safe (but that's probably fine)
+Server::Server(in_addr_t ip, in_port_t port, int backlog)
 {
-    sockaddr_in addr;
+    fd_ = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+    if (fd_ == -1) {
+        throw SyscallError("socket", errno);
+    }
 
-    std::memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = htonl(ip);
+    addr_.sin_family = AF_INET;
+    addr_.sin_port = htons(port);
+    addr_.sin_addr.s_addr = htonl(ip);
 
-    socket_.bind(addr);
-    socket_.listen(limit_conn);
+    if (::bind(fd_, (sockaddr*) &addr_, sizeof(addr_)) == -1) {
+        throw SyscallError("bind", errno);
+    }
+
+    if (::listen(fd_, backlog) == -1) {
+        throw SyscallError("listen", errno);
+    }
+
+    epoll_fd_ = epoll_create1(0);
+    if (epoll_fd_ == -1) {
+        throw SyscallError("epoll_create1", errno);
+    }
 
     epoll_event ev;
-
-    std::memset(&ev, 0, sizeof(ev));
     ev.events = EPOLLIN;
     ev.data.ptr = NULL;
 
-    epoll_fd_ = epoll_create1(0);
-    epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, listen_fd(), &ev);
+    if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd_, &ev) == -1) {
+        throw SyscallError("epoll_ctl", errno);
+    }
+
     list_head_ = NULL;
 }
 
 Server::~Server()
 {
-    // Close all remaining active connections
     while (list_head_) {
         Client* conn = list_head_;
         list_head_ = list_head_->next();
         delete conn;
     }
-
-    close(epoll_fd_);
+    if (epoll_fd_ != -1) {
+        close(epoll_fd_);
+    }
+    if (fd_ != -1) {
+        close(fd_);
+    }
 }
 
 void Server::run()
@@ -100,33 +115,38 @@ void Server::remove_connection(Client* conn)
 // of pending connections for the listening socket
 void Server::accept_connection()
 {
-    Socket* client_sock = socket_.accept();
+    sockaddr_in addr;
+    socklen_t addr_len = sizeof(addr);
 
-    // error occured or no further connection request to be handled -> fine
-    if (client_sock == NULL) {
+    int client_fd = ::accept(fd_, (sockaddr*) &addr, &addr_len);
+    if (client_fd == -1) {
         return;
     }
 
-    client_sock->set_nonblocking();
+    Client* client = new Client(client_fd, addr);
 
     epoll_event ev;
-    Client* client = new Client(client_sock);
-    int client_fd = client_sock->fd();
-
     ev.events = EPOLLIN;
     ev.data.ptr = client;
-    epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, client_fd, &ev);
+
+    if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, client_fd, &ev) == -1) {
+        throw SyscallError("epoll_ctl", errno);
+    }
 
     add_connection(client);
 }
 
 void Server::send_response(Client* conn)
 {
-    int client_fd = conn->socket()->fd();
+    int client_fd = conn->fd();
     HttpResponse res = {200, "text/plain", "Hello, client!\n"};
     std::string raw = res.to_string();
 
     send(client_fd, raw.data(), raw.size(), 0);
-    epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client_fd, NULL);
+
+    if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client_fd, NULL) == -1) {
+        throw SyscallError("epoll_ctl", errno);
+    }
+
     remove_connection(conn);
 }
