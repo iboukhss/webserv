@@ -7,7 +7,11 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 
+#include <csignal>
+
 #define WEBSERV_MAX_EVENTS 64
+
+extern volatile sig_atomic_t g_sigint_received;
 
 class Server {
 public:
