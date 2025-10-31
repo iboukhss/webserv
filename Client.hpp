@@ -1,21 +1,23 @@
-
-
 #ifndef CLIENT_HPP_
 #define CLIENT_HPP_
 
-#include "Socket.hpp"
+#include <netinet/in.h>
+
+#include <string>
 
 class Client {
 public:
-    explicit Client(Socket* socket);
+    Client(int fd, const sockaddr_in& addr);
     ~Client();
 
-    Socket* socket() { return socket_; }
-    Client* next() { return next_; }
-    Client* prev() { return prev_; }
-
+    void set_nonblocking();
     void set_next(Client* conn) { next_ = conn; }
     void set_prev(Client* conn) { prev_ = conn; }
+
+    int fd() const { return fd_; }
+    const sockaddr_in& addr() const { return addr_; }
+    Client* next() { return next_; }
+    Client* prev() { return prev_; }
 
 private:
     Client();
@@ -23,9 +25,12 @@ private:
     Client& operator=(const Client& other);
 
 private:
-    Socket* socket_;
-    Client* next_;
+    int fd_;
+    sockaddr_in addr_;
+    std::string recv_buffer_;
+    std::string send_buffer_;
     Client* prev_;
+    Client* next_;
 };
 
 #endif // CLIENT_HPP_
