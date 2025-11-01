@@ -166,7 +166,7 @@ Server::Server(in_addr_t ip, in_port_t port, int limit_conn, const ServerConfig*
 {
     fd_ = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
     if (fd_ == -1) {
-        throw SyscallError("socket", errno);
+        throw UnrecoverableError("socket", errno);
     }
 
     addr_.sin_family = AF_INET;
@@ -174,16 +174,16 @@ Server::Server(in_addr_t ip, in_port_t port, int limit_conn, const ServerConfig*
     addr_.sin_addr.s_addr = htonl(ip);
 
     if (::bind(fd_, (sockaddr*) &addr_, sizeof(addr_)) == -1) {
-        throw SyscallError("bind", errno);
+        throw UnrecoverableError("bind", errno);
     }
 
     if (::listen(fd_, limit_conn) == -1) {
-        throw SyscallError("listen", errno);
+        throw UnrecoverableError("listen", errno);
     }
 
     epoll_fd_ = epoll_create1(0);
     if (epoll_fd_ == -1) {
-        throw SyscallError("epoll_create1", errno);
+        throw UnrecoverableError("epoll_create1", errno);
     }
 
     epoll_event ev;
@@ -191,7 +191,7 @@ Server::Server(in_addr_t ip, in_port_t port, int limit_conn, const ServerConfig*
     ev.data.ptr = NULL;
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd_, &ev) == -1) {
-        throw SyscallError("epoll_ctl", errno);
+        throw UnrecoverableError("epoll_ctl", errno);
     }
 
     list_head_ = NULL;
@@ -224,7 +224,7 @@ void Server::run()
                 n_events = 0;
                 break;
             default:
-                throw SyscallError("epoll_wait", errno);
+                throw UnrecoverableError("epoll_wait", errno);
             }
         }
 
@@ -296,7 +296,7 @@ void Server::accept_connection()
     ev.data.ptr = client;
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, client_fd, &ev) == -1) {
-        throw SyscallError("epoll_ctl", errno);
+        throw UnrecoverableError("epoll_ctl", errno);
     }
 
     add_connection(client);
@@ -311,7 +311,7 @@ void Server::send_response(Client* conn)
     send(client_fd, raw.data(), raw.size(), 0);
 
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client_fd, NULL) == -1) {
-        throw SyscallError("epoll_ctl", errno);
+        throw UnrecoverableError("epoll_ctl", errno);
     }
 
     remove_connection(conn);

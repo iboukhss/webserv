@@ -25,10 +25,10 @@ void Client::set_nonblocking()
 {
     int flags = fcntl(fd_, F_GETFL, 0);
     if (flags == -1) {
-        throw SyscallError("fcntl", errno);
+        throw UnrecoverableError("fcntl", errno);
     }
 
     if (fcntl(fd_, F_SETFL, flags | O_NONBLOCK) == -1) {
-        throw SyscallError("fcntl", errno);
+        throw UnrecoverableError("fcntl", errno);
     }
 }

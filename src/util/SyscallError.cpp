@@ -2,7 +2,13 @@
 
 #include <cstring>
 
-SyscallError::SyscallError(const std::string& msg, int err)
+UnrecoverableError::UnrecoverableError(const std::string& msg)
+    : std::runtime_error(msg),
+      err_(-1)
+{
+}
+
+UnrecoverableError::UnrecoverableError(const std::string& msg, int err)
     : std::runtime_error(msg + ": " + std::strerror(err)),
       err_(err)
 {

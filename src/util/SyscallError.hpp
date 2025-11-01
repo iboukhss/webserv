@@ -5,9 +5,10 @@
 
 #include <stdexcept>
 
-class SyscallError : public std::runtime_error {
+class UnrecoverableError : public std::runtime_error {
 public:
-    SyscallError(const std::string& msg, int err);
+    explicit UnrecoverableError(const std::string& msg);
+    UnrecoverableError(const std::string& msg, int err);
 
     int code() const { return err_; }
 
