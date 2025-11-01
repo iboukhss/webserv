@@ -26,6 +26,10 @@ CheckOptions:
   - key: readability-identifier-naming.PrivateMemberSuffix
     value: _
 
+  # g_ prefix for global variables (g_foo)
+  - key: readability-identifier-naming.GlobalVariablePrefix
+    value: g_
+
   # CamelCase constants with k prefix (kMaxConnections)
   - key: readability-identifier-naming.ConstantCase
     value: CamelCase
