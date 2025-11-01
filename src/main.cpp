@@ -80,9 +80,9 @@ int main(void)
     try {
         server.run();
     }
-    catch (const SyscallError& e) {
+    catch (const UnrecoverableError& e) {
         std::cerr << e.what() << std::endl;
-        return e.code();
+        return 1;
     }
     return 0;
 }
