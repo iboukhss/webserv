@@ -1,36 +1,68 @@
-NAME = webserv
+# Compiler settings
+CXX       = clang++
+CXXFLAGS  = -Wall -Wextra -Werror -std=c++98 -g3
+CPPFLAGS  = -MMD -MP
 
-CXX = clang++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -g3
-# CPPFLAGS are for C pre-processor flags (different from CXXFLAGS)
-CPPFLAGS = -MMD -MP
+# Executable name
+NAME      = webserv
 
-SRCS = main.cpp Server.cpp Client.cpp HttpResponse.cpp SyscallError.cpp
-HDRS = Server.hpp Client.hpp HttpResponse.hpp SyscallError.hpp structs_dev.hpp
+# Directories
+SRC_DIR   = src
+BUILD_DIR = build
+OBJ_DIR   = $(BUILD_DIR)/obj
+BIN_DIR   = $(BUILD_DIR)/bin
 
-OBJS = $(SRCS:.cpp=.o)
+# Main target
+TARGET    = $(BIN_DIR)/$(NAME)
+
+# Source tree (keep in alphabetical order)
+SRCS      = src/Client.cpp \
+            src/Client.hpp \
+            src/HttpResponse.cpp \
+            src/HttpResponse.hpp \
+            src/main.cpp \
+            src/Server.cpp \
+            src/Server.hpp \
+            src/SyscallError.cpp \
+            src/SyscallError.hpp
+
+# Separate .cpp and .hpp files
+CPPS = $(filter %.cpp,$(SRCS))
+HPPS = $(filter %.hpp,$(SRCS))
+
+# Objects and dependencies
+OBJS = $(patsubst src/%,build/obj/%,$(CPPS:.cpp=.o))
 DEPS = $(OBJS:.o=.d)
 
-.PHONY: all clean fclean re val db format format-fix lint lint-fix check fix
+.PHONY: all run val
+all: $(TARGET)
 
-all: $(NAME)
+run: all
+	./$(TARGET)
 
-$(NAME): $(OBJS)
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(OBJS) -o $(NAME)
+val: all
+	valgrind ./$(TARGET)
 
-%.o: %.cpp
+$(TARGET): $(OBJS)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(OBJS) -o $@
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
 
+-include $(DEPS)
+
+# Regular cleaning targets
+
+.PHONY: clean fclean re
 clean:
-	rm -f *.o *.d
+	rm -rf $(OBJ_DIR)
 
 fclean: clean
-	rm -f $(NAME)
+	rm -rf $(BIN_DIR)
 
 re: fclean all
-
-val:
-	valgrind ./webserv
 
 # Formatting and linting section
 
@@ -38,30 +70,26 @@ val:
 # compiledb is used to generate the compilation database (compile_commands.json)
 # used by clang-tidy.
 
+.PHONY: db format lint check
 db:
 	compiledb -n $(MAKE)
 
-run: 
-	make
-	./webserv
-
 format:
-	clang-format -style=file -dry-run *.cpp *.hpp
-
-format-fix:
-	clang-format -style=file -i *.cpp *.hpp
+	clang-format -style=file --dry-run -Werror $(CPPS) $(HPPS)
 
 lint: db
-	clang-tidy -p=. -header-filter=.* *.cpp
-
-lint-fix: db
-	clang-tidy -p=. -header-filter=.* -fix *.cpp
+	clang-tidy -p=. --header-filter=.* --warnings-as-errors=* $(CPPS)
 
 check: format lint
 
-# Careful, these rules will overwrite files.
+# Careful, these targets will overwrite files.
 # Make sure to use `make check` before committing irreversible changes.
 
-fix: format-fix lint-fix
+.PHONY: format-fix lint-fix fix
+format-fix:
+	clang-format -style=file -i $(CPPS) $(HPPS)
 
--include $(DEPS)
+lint-fix: db
+	clang-tidy -p=. --header-filter=.* -fix $(CPPS)
+
+fix: format-fix lint-fix

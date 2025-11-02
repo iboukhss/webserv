@@ -14,11 +14,5 @@ jobs:
       - name: Install dependencies
         run: pipx install compiledb
 
-      - name: Run clang-format
-        run: clang-format --dry-run --Werror *.cpp *.hpp
-
-      - name: Build and generate compilation database
-        run: compiledb make
-
-      - name: Run clang-tidy
-        run: clang-tidy --header-filter=.* --warnings-as-errors=* *.cpp
+      - name: Build and run checks
+        run: make all check
