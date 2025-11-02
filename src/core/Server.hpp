@@ -1,8 +1,8 @@
-#ifndef SERVER_H_
-#define SERVER_H_
+#ifndef CORE_SERVER_H_
+#define CORE_SERVER_H_
 
-#include "Client.hpp"
-#include "structs_dev.hpp"
+#include "core/Client.hpp"
+#include "util/structs_dev.hpp"
 
 #include <netinet/in.h>
 #include <sys/epoll.h>
@@ -49,4 +49,4 @@ private:
     const struct ServerConfig* config_;
 };
 
-#endif
+#endif // CORE_SERVER_HPP_

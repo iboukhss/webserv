@@ -9,8 +9,8 @@ What should the task do ?
 
 */
 
-#ifndef CONFIGPARSER_HPP_
-#define CONFIGPARSER_HPP_
+#ifndef CONFIG_CONFIG_PARSER_HPP_
+#define CONFIG_CONFIG_PARSER_HPP_
 
 #include <string>
 #include <vector>
@@ -31,4 +31,4 @@ private:
     ConfigParser();
 };
 
-#endif
+#endif // CONFIG_CONFIG_PARSER_HPP_

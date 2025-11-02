@@ -1,9 +1,9 @@
 
 
 // #include "ConfigParser.hpp"
-#include "Server.hpp"
-#include "SyscallError.hpp"
-#include "structs_dev.hpp" //to be removed
+#include "core/Server.hpp"
+#include "util/SyscallError.hpp"
+#include "util/structs_dev.hpp" //to be removed
 
 #include <iostream>
 

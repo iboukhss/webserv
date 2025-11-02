@@ -1,5 +1,5 @@
-#ifndef HTTPRESPONSE_HPP_
-#define HTTPRESPONSE_HPP_
+#ifndef HTTP_HTTP_RESPONSE_HPP_
+#define HTTP_HTTP_RESPONSE_HPP_
 
 #include <string>
 
@@ -10,4 +10,4 @@ struct HttpResponse {
     std::string to_string() const;
 };
 
-#endif // HTTPRESPONSE_HPP_
+#endif // HTTP_HTTP_RESPONSE_HPP_

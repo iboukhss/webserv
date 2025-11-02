@@ -1,8 +1,8 @@
-#include "Server.hpp"
+#include "core/Server.hpp"
 
-#include "HttpResponse.hpp"
-#include "SyscallError.hpp"
-#include "structs_dev.hpp"
+#include "http/HttpResponse.hpp"
+#include "util/SyscallError.hpp"
+#include "util/structs_dev.hpp"
 
 #include <errno.h>
 #include <fcntl.h>
