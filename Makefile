@@ -1,8 +1,3 @@
-# Compiler settings
-CXX       = clang++
-CXXFLAGS  = -Wall -Wextra -Werror -std=c++98 -g3
-CPPFLAGS  = -MMD -MP
-
 # Executable name
 NAME      = webserv
 
@@ -16,25 +11,33 @@ BIN_DIR   = $(BUILD_DIR)/bin
 TARGET    = $(BIN_DIR)/$(NAME)
 
 # Source tree (keep in alphabetical order)
-SRCS      = src/Client.cpp \
-            src/Client.hpp \
-            src/HttpResponse.cpp \
-            src/HttpResponse.hpp \
-            src/main.cpp \
-            src/Server.cpp \
-            src/Server.hpp \
-            src/SyscallError.cpp \
-            src/SyscallError.hpp
+SRCS      = $(addprefix $(SRC_DIR)/, \
+            core/Client.cpp \
+            core/Client.hpp \
+            core/Server.cpp \
+            core/Server.hpp \
+            http/HttpResponse.cpp \
+            http/HttpResponse.hpp \
+            util/SyscallError.cpp \
+            util/SyscallError.hpp \
+            main.cpp \
+)
 
 # Separate .cpp and .hpp files
-CPPS = $(filter %.cpp,$(SRCS))
-HPPS = $(filter %.hpp,$(SRCS))
+CPPS      = $(filter %.cpp,$(SRCS))
+HPPS      = $(filter %.hpp,$(SRCS))
 
 # Objects and dependencies
-OBJS = $(patsubst src/%,build/obj/%,$(CPPS:.cpp=.o))
-DEPS = $(OBJS:.o=.d)
+OBJS      = $(patsubst $(SRC_DIR)/%,$(OBJ_DIR)/%,$(CPPS:.cpp=.o))
+DEPS      = $(OBJS:.o=.d)
 
-.PHONY: all run val
+# Compiler settings
+CXX       = clang++
+CXXFLAGS  = -Wall -Wextra -Werror -std=c++98 -g3
+CPPFLAGS  = -I$(SRC_DIR) -MMD -MP
+
+# Default target
+PHONY += all run val
 all: $(TARGET)
 
 run: all
@@ -51,11 +54,8 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
 
--include $(DEPS)
-
 # Regular cleaning targets
-
-.PHONY: clean fclean re
+PHONY += clean fclean re
 clean:
 	rm -rf $(OBJ_DIR)
 
@@ -69,8 +69,7 @@ re: fclean all
 # If compiledb is not installed do `pipx install compiledb`.
 # compiledb is used to generate the compilation database (compile_commands.json)
 # used by clang-tidy.
-
-.PHONY: db format lint check
+PHONY += db format lint check
 db:
 	compiledb -n $(MAKE)
 
@@ -84,8 +83,7 @@ check: format lint
 
 # Careful, these targets will overwrite files.
 # Make sure to use `make check` before committing irreversible changes.
-
-.PHONY: format-fix lint-fix fix
+PHONY += format-fix lint-fix fix
 format-fix:
 	clang-format -style=file -i $(CPPS) $(HPPS)
 
@@ -93,3 +91,8 @@ lint-fix: db
 	clang-tidy -p=. --header-filter=.* -fix $(CPPS)
 
 fix: format-fix lint-fix
+
+# Include dependencies
+-include $(DEPS)
+
+.PHONY: $(PHONY)

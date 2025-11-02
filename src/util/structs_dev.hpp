@@ -1,8 +1,8 @@
 #include <string>
 #include <vector>
 
-#ifndef STRUCTS_DEV_HPP
-#define STRUCTS_DEV_HPP
+#ifndef UTIL_STRUCTS_DEV_HPP_
+#define UTIL_STRUCTS_DEV_HPP_
 // for dev purpose only
 struct Location {
     std::string path;
@@ -28,4 +28,4 @@ struct HttpRequest {
     std::string path;
 };
 
-#endif
+#endif // UTIL_STRUCTS_DEV_HPP_

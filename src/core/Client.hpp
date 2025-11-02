@@ -1,5 +1,5 @@
-#ifndef CLIENT_HPP_
-#define CLIENT_HPP_
+#ifndef CORE_CLIENT_HPP_
+#define CORE_CLIENT_HPP_
 
 #include <netinet/in.h>
 
@@ -33,4 +33,4 @@ private:
     Client* next_;
 };
 
-#endif // CLIENT_HPP_
+#endif // CORE_CLIENT_HPP_

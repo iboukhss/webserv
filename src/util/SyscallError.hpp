@@ -1,5 +1,5 @@
-#ifndef SYSCALLERROR_HPP_
-#define SYSCALLERROR_HPP_
+#ifndef UTIL_SYSCALL_ERROR_HPP_
+#define UTIL_SYSCALL_ERROR_HPP_
 
 #include <errno.h>
 
@@ -15,4 +15,4 @@ private:
     int err_;
 };
 
-#endif // SYSCALLERROR_HPP_
+#endif // UTIL_SYSCALL_ERROR_HPP_
