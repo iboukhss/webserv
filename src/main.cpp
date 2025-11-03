@@ -3,7 +3,6 @@
 // #include "ConfigParser.hpp"
 #include "core/Server.hpp"
 #include "util/SyscallError.hpp"
-#include "util/structs_dev.hpp" //to be removed
 
 #include <iostream>
 
@@ -66,18 +65,18 @@ void test_config1(ServerConfig& config)
 
 int main(void)
 {
-    ServerConfig config;
-    test_config1(config);
-
-    Server server(INADDR_ANY, 8080, 1000, &config);
-
-    struct sigaction sa;
-    sa.sa_handler = handle_sigint;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    sigaction(SIGINT, &sa, NULL);
-
     try {
+        ServerConfig config;
+        test_config1(config);
+
+        Server server(INADDR_ANY, 8080, 1000, config);
+
+        struct sigaction sa;
+        sa.sa_handler = handle_sigint;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = 0;
+        sigaction(SIGINT, &sa, NULL);
+
         server.run();
     }
     catch (const UnrecoverableError& e) {
