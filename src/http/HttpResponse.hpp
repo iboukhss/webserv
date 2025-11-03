@@ -3,6 +3,16 @@
 
 #include <string>
 
+enum HttpStatus {
+    kOk = 200,
+    kBadRequest = 400,
+    kForbidden = 403,
+    kNotFound = 404,
+    kMethodNotAllowed = 405,
+    kInternalServerError = 500,
+    kNotImplemented = 501
+};
+
 struct HttpResponse {
     int status;
     std::string content_type;

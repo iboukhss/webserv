@@ -7,17 +7,18 @@ std::string HttpResponse::to_string() const
     std::ostringstream out;
     std::string reason;
 
+    /* clang-format off */
     switch (status) {
-    case 200:
-        reason = "OK";
-        break;
-    case 404:
-        reason = "Not Found";
-        break;
-    default:
-        reason = "Unknown";
-        break;
+    case kOk: reason = "OK"; break;
+    case kBadRequest: reason = "Bad Request"; break;
+    case kForbidden: reason = "Forbidden"; break;
+    case kNotFound: reason = "Not Found"; break;
+    case kMethodNotAllowed: reason = "Method not allowed"; break;
+    case kInternalServerError: reason = "Internal Server Error"; break;
+    case kNotImplemented: reason = "Not Implemented"; break;
+    default: reason = "Unknown"; break;
     }
+    /* clang-format on */
 
     out << "HTTP/1.1 " << status << " " << reason << "\r\n";
     out << "Content-Type: " << content_type << "\r\n";
