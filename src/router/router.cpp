@@ -1,6 +1,6 @@
-#include "core/Server.hpp"
-#include "http/HttpRequest.hpp"
-#include "http/HttpResponse.hpp"
+#include "core/server.hpp"
+#include "http/http_request.hpp"
+#include "http/http_response.hpp"
 #include "router/router_internal.hpp"
 
 #include <sys/stat.h>

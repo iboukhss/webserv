@@ -12,16 +12,17 @@ TARGET    = $(BIN_DIR)/$(NAME)
 
 # Source tree (keep in alphabetical order)
 SRCS      = $(addprefix $(SRC_DIR)/, \
-            config/ServerConfig.hpp \
-            core/Client.cpp \
-            core/Client.hpp \
-            core/Server.cpp \
-            core/Server.hpp \
-            http/HttpResponse.cpp \
-            http/HttpResponse.hpp \
+            config/server_config.hpp \
+            core/client.cpp \
+            core/client.hpp \
+            core/server.cpp \
+            core/server.hpp \
+            http/http_request.hpp \
+            http/http_response.cpp \
+            http/http_response.hpp \
             router/router.cpp \
-            util/SyscallError.cpp \
-            util/SyscallError.hpp \
+            util/syscall_error.cpp \
+            util/syscall_error.hpp \
             main.cpp \
 )
 

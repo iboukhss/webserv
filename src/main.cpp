@@ -1,8 +1,5 @@
-
-
-// #include "ConfigParser.hpp"
-#include "core/Server.hpp"
-#include "util/SyscallError.hpp"
+#include "core/server.hpp"
+#include "util/syscall_error.hpp"
 
 #include <iostream>
 

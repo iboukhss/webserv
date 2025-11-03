@@ -1,8 +1,8 @@
 #ifndef CORE_CLIENT_HPP_
 #define CORE_CLIENT_HPP_
 
-#include "http/HttpRequest.hpp"
-#include "http/HttpResponse.hpp"
+#include "http/http_request.hpp"
+#include "http/http_response.hpp"
 
 #include <netinet/in.h>
 
