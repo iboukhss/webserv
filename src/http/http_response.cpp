@@ -1,4 +1,4 @@
-#include "http/HttpResponse.hpp"
+#include "http/http_response.hpp"
 
 #include <sstream>
 

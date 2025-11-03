@@ -1,9 +1,9 @@
 #ifndef CORE_SERVER_H_
 #define CORE_SERVER_H_
 
-#include "config/ServerConfig.hpp"
-#include "core/Client.hpp"
-#include "http/HttpRequest.hpp"
+#include "config/server_config.hpp"
+#include "core/client.hpp"
+#include "http/http_request.hpp"
 
 #include <netinet/in.h>
 #include <sys/epoll.h>

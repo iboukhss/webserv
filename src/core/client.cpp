@@ -1,6 +1,6 @@
-#include "core/Client.hpp"
+#include "core/client.hpp"
 
-#include "util/SyscallError.hpp"
+#include "util/syscall_error.hpp"
 
 #include <fcntl.h>
 #include <unistd.h>
