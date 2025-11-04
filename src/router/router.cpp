@@ -33,26 +33,26 @@ int Router::prefix_length(const std::string& req_location, const std::string& lo
 }
 
 // for the moment it takes some static input
-const Location* Router::routing(const std::string& req_location, const ServerConfig& config)
+const Location* Router::routing(const std::string& req_location)
 {
     int longest_match = 0;
     const Location* best_match = NULL;
     // iterrate through locations to find longest match
-    for (size_t i = 0; i < config.locations.size(); i++) {
-        int len_match = prefix_length(req_location, config.locations[i].path);
+    for (size_t i = 0; i < config_.locations.size(); i++) {
+        int len_match = prefix_length(req_location, config_.locations[i].path);
         if (len_match > longest_match) {
-            best_match = &config.locations[i];
+            best_match = &config_.locations[i];
         }
     }
-    return (best_match ? best_match : &(config.default_location));
+    return (best_match ? best_match : &(config_.default_location));
 }
 
 // NOTE(IBO): I changed the return type to bool because I got confused during testing.
 // Sidenote, I don't think allowed methods should be stored in the ServerConfig.
-bool Router::is_valid_method(const std::string& method, const ServerConfig& config)
+bool Router::is_valid_method(const std::string& method)
 {
-    for (size_t i = 0; i < config.methods.size(); ++i) {
-        if (method == config.methods[i])
+    for (size_t i = 0; i < config_.methods.size(); ++i) {
+        if (method == config_.methods[i])
             return (true);
     }
     return (false);
@@ -60,10 +60,9 @@ bool Router::is_valid_method(const std::string& method, const ServerConfig& conf
 
 // Description : build full path by concat 3 elements and consider for leading/trailing backslashes
 // TO DO (DHE) : In the config parser -> ensure that root has no trailing /
-std::string Router::build_request_path(const HttpRequest& request, const Location* best_match,
-                                       const ServerConfig& config)
+std::string Router::build_request_path(const HttpRequest& request, const Location* best_match)
 {
-    std::string full_path = config.root;
+    std::string full_path = config_.root;
     std::string folder = static_cast<std::string>(best_match->path);
     // std::cout << "root = " << full_path << std::endl;
     std::string file =
@@ -102,7 +101,7 @@ void Router::handle_request(Client* conn, const HttpRequest& request)
 
     std::cout << request.method << std::endl;
 
-    if (!is_valid_method(request.method, config_)) {
+    if (!is_valid_method(request.method)) {
         set_status(conn, kMethodNotAllowed, ""); // in the end should be done
         return;
     }
@@ -112,13 +111,13 @@ void Router::handle_request(Client* conn, const HttpRequest& request)
         return;
     }
 
-    const Location* longest_match = routing(request.path, config_);
+    const Location* longest_match = routing(request.path);
     if (!longest_match) {
         set_status(conn, kNotFound, "");
         return;
     }
 
-    std::string full_path = build_request_path(request, longest_match, config_);
+    std::string full_path = build_request_path(request, longest_match);
     std::cout << "longest_match = " << longest_match->path << std::endl;
     std::cout << "full_path = " << full_path << std::endl;
 
