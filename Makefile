@@ -21,6 +21,7 @@ SRCS      = $(addprefix $(SRC_DIR)/, \
             http/http_response.cpp \
             http/http_response.hpp \
             router/router.cpp \
+			router/router.hpp \
             util/syscall_error.cpp \
             util/syscall_error.hpp \
             main.cpp \
