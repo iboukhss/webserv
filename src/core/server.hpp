@@ -4,6 +4,7 @@
 #include "config/server_config.hpp"
 #include "core/client.hpp"
 #include "http/http_request.hpp"
+#include "router/router.hpp"
 
 #include <netinet/in.h>
 #include <sys/epoll.h>
@@ -45,6 +46,7 @@ private:
     int epoll_fd_;
     epoll_event events_[WEBSERV_MAX_EVENTS];
     Client* list_head_;
+    Router router_;
 };
 
 #endif // CORE_SERVER_HPP_
