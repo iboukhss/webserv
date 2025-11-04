@@ -1,15 +1,8 @@
 #include "core/server.hpp"
+#include "core/signals.hpp"
 #include "util/syscall_error.hpp"
 
 #include <iostream>
-
-volatile sig_atomic_t g_sigint_received = 0;
-
-extern "C" void handle_sigint(int sig)
-{
-    (void) sig;
-    g_sigint_received = 1;
-}
 
 void test_config1(ServerConfig& config)
 {
@@ -62,17 +55,13 @@ void test_config1(ServerConfig& config)
 
 int main(void)
 {
+    setup_signal_handlers();
+
     try {
         ServerConfig config;
         test_config1(config);
 
         Server server(INADDR_ANY, 8080, 1000, config);
-
-        struct sigaction sa;
-        sa.sa_handler = handle_sigint;
-        sigemptyset(&sa.sa_mask);
-        sa.sa_flags = 0;
-        sigaction(SIGINT, &sa, NULL);
 
         server.run();
     }
