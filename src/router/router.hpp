@@ -11,8 +11,12 @@
 
 class Router {
 public:
-    Router(ServerConfig& config);
+    explicit Router(ServerConfig& config);
     ~Router();
+
+    Router(const Router& other);
+    Router& operator=(const Router& other);
+
     void handle_request(Client* conn, const HttpRequest& request);
 
 private:
