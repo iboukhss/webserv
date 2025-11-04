@@ -1,14 +1,26 @@
+#include "router/router.hpp"
+
+#include "config/server_config.hpp"
+#include "core/client.hpp"
 #include "core/server.hpp"
 #include "http/http_request.hpp"
 #include "http/http_response.hpp"
-#include "router/router_internal.hpp"
 
 #include <sys/stat.h>
 
 #include <iostream>
 #include <string>
 
-static int prefix_length(const std::string& req_location, const std::string& location)
+Router::Router(ServerConfig& config)
+    : config_(config)
+{
+}
+
+Router::~Router()
+{
+}
+
+int Router::prefix_length(const std::string& req_location, const std::string& location)
 {
     int len_min = std::min(req_location.size(), location.size());
     int len_match = 0;
@@ -21,7 +33,7 @@ static int prefix_length(const std::string& req_location, const std::string& loc
 }
 
 // for the moment it takes some static input
-static const Location* routing(const std::string& req_location, const ServerConfig& config)
+const Location* Router::routing(const std::string& req_location, const ServerConfig& config)
 {
     int longest_match = 0;
     const Location* best_match = NULL;
@@ -37,7 +49,7 @@ static const Location* routing(const std::string& req_location, const ServerConf
 
 // NOTE(IBO): I changed the return type to bool because I got confused during testing.
 // Sidenote, I don't think allowed methods should be stored in the ServerConfig.
-static bool is_valid_method(const std::string& method, const ServerConfig& config)
+bool Router::is_valid_method(const std::string& method, const ServerConfig& config)
 {
     for (size_t i = 0; i < config.methods.size(); ++i) {
         if (method == config.methods[i])
@@ -48,8 +60,8 @@ static bool is_valid_method(const std::string& method, const ServerConfig& confi
 
 // Description : build full path by concat 3 elements and consider for leading/trailing backslashes
 // TO DO (DHE) : In the config parser -> ensure that root has no trailing /
-static std::string build_request_path(const HttpRequest& request, const Location* best_match,
-                                      const ServerConfig& config)
+std::string Router::build_request_path(const HttpRequest& request, const Location* best_match,
+                                       const ServerConfig& config)
 {
     std::string full_path = config.root;
     std::string folder = static_cast<std::string>(best_match->path);
@@ -73,7 +85,7 @@ static std::string build_request_path(const HttpRequest& request, const Location
 
 // NOTE(IBO): HttpResponse already has a member function to create the raw response.
 // Feel free to make any changes to that file.
-static void set_status(Client* conn, int status_code, const std::string& body)
+void Router::set_status(Client* conn, int status_code, const std::string& body)
 {
     HttpResponse res = {status_code, "text/plain", body};
 
@@ -82,14 +94,15 @@ static void set_status(Client* conn, int status_code, const std::string& body)
 
 // NOTE(IBO): Maybe we don't even need to pass a const HttpRequest? And just use the
 // stored request with conn->req(), very minor detail.
-void Server::handle_request(Client* conn, const HttpRequest& request)
+void Router::handle_request(Client* conn, const HttpRequest& request)
 {
-    const ServerConfig& conf = config_;
+    // const ServerConfig& conf = config_; -> remove config from function definitions as Router
+    // stores reference to config.
     struct stat sb; // needed by stat to check if file exists
 
     std::cout << request.method << std::endl;
 
-    if (!is_valid_method(request.method, conf)) {
+    if (!is_valid_method(request.method, config_)) {
         set_status(conn, kMethodNotAllowed, ""); // in the end should be done
         return;
     }
@@ -99,13 +112,13 @@ void Server::handle_request(Client* conn, const HttpRequest& request)
         return;
     }
 
-    const Location* longest_match = routing(request.path, conf);
+    const Location* longest_match = routing(request.path, config_);
     if (!longest_match) {
         set_status(conn, kNotFound, "");
         return;
     }
 
-    std::string full_path = build_request_path(request, longest_match, conf);
+    std::string full_path = build_request_path(request, longest_match, config_);
     std::cout << "longest_match = " << longest_match->path << std::endl;
     std::cout << "full_path = " << full_path << std::endl;
 
