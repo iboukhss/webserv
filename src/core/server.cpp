@@ -2,6 +2,7 @@
 
 #include "http/http_request.hpp"
 #include "http/http_response.hpp"
+#include "router/router.hpp"
 #include "util/syscall_error.hpp"
 
 #include <errno.h>
@@ -17,7 +18,8 @@
 #include <iostream>
 
 Server::Server(in_addr_t ip, in_port_t port, int limit_conn, ServerConfig& config)
-    : config_(config)
+    : config_(config),
+      router_(config)
 {
     fd_ = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
     if (fd_ == -1) {
@@ -211,7 +213,7 @@ void Server::receive_request(Client* conn)
 
     // no try catch required except if we define a
     // scenario where we want to stop the server
-    handle_request(conn, req);
+    router_.handle_request(conn, req);
 }
 
 void Server::send_response(Client* conn)
