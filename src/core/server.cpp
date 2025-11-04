@@ -1,5 +1,6 @@
 #include "core/server.hpp"
 
+#include "core/signals.hpp"
 #include "http/http_request.hpp"
 #include "http/http_response.hpp"
 #include "router/router.hpp"
