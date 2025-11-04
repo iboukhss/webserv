@@ -22,10 +22,9 @@ public:
 private:
     Router();
     int prefix_length(const std::string& req_location, const std::string& location);
-    const Location* routing(const std::string& req_location, const ServerConfig& config);
-    bool is_valid_method(const std::string& method, const ServerConfig& config);
-    std::string build_request_path(const HttpRequest& request, const Location* best_match,
-                                   const ServerConfig& config);
+    const Location* routing(const std::string& req_location);
+    bool is_valid_method(const std::string& method);
+    std::string build_request_path(const HttpRequest& request, const Location* best_match);
     void set_status(Client* conn, int status_code, const std::string& body);
     ServerConfig config_;
 };
