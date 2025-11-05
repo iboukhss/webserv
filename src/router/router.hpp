@@ -1,9 +1,6 @@
 #ifndef ROUTER_ROUTER_HPP_
 #define ROUTER_ROUTER_HPP_
 
-// NOTE(IBO): I was using this file to store router related stuff while debugging.
-// Maybe put your internal functions here? All functions in router.cpp are now static.
-
 #include "config/server_config.hpp"
 #include "core/client.hpp"
 
@@ -17,7 +14,7 @@ public:
     Router(const Router& other);
     Router& operator=(const Router& other);
 
-    void handle_request(Client* conn, const HttpRequest& request);
+    bool handle_request(Client* conn, const HttpRequest& request, std::string& full_path);
 
 private:
     Router();

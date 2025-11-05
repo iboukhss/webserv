@@ -93,50 +93,21 @@ void Router::set_status(Client* conn, int status_code, const std::string& body)
 
 // NOTE(IBO): Maybe we don't even need to pass a const HttpRequest? And just use the
 // stored request with conn->req(), very minor detail.
-void Router::handle_request(Client* conn, const HttpRequest& request)
+bool Router::handle_request(Client* conn, const HttpRequest& request, std::string& full_path)
 {
-    // const ServerConfig& conf = config_; -> remove config from function definitions as Router
-    // stores reference to config.
-    struct stat sb; // needed by stat to check if file exists
-
-    std::cout << request.method << std::endl;
-
     if (!is_valid_method(request.method)) {
         set_status(conn, kMethodNotAllowed, ""); // in the end should be done
-        return;
+        return (false);
     }
-
     if (request.path.empty()) {
         set_status(conn, kBadRequest, "");
-        return;
+        return (false);
     }
-
     const Location* longest_match = routing(request.path);
     if (!longest_match) {
         set_status(conn, kNotFound, "");
-        return;
+        return (false);
     }
-
-    std::string full_path = build_request_path(request, longest_match);
-    std::cout << "longest_match = " << longest_match->path << std::endl;
-    std::cout << "full_path = " << full_path << std::endl;
-
-    // NOTE(IBO): This if-else tree is very dangerous, very easy to miss one return;
-    // Would be a good idea to refactor.
-    if (request.method == "GET") {
-        if (!stat(full_path.c_str(), &sb)) {
-            set_status(conn, kNotFound, "");
-            return;
-        }
-        set_status(conn, kOk, "Hello from router!\n"); // here the file needs to be read
-                                                       // and send to the socket
-        return;
-    }
-    else if (request.method == "DELETE") {
-    }
-    else if (request.method == "POST") {
-    }
-    else {
-        set_status(conn, kMethodNotAllowed, "");
-    }
+    full_path = build_request_path(request, longest_match);
+    return (true);
 }
