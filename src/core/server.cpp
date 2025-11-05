@@ -212,9 +212,10 @@ void Server::receive_request(Client* conn)
 
     conn->set_request(req);
 
-    // no try catch required except if we define a
-    // scenario where we want to stop the server
-    router_.handle_request(conn, req);
+    // DHE: adding full_path variable to run make lint. The router_.handle_request() call needs to
+    // be moved out
+    std::string full_path;
+    router_.handle_request(conn, req, full_path);
 }
 
 void Server::send_response(Client* conn)
