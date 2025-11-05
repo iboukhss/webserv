@@ -70,37 +70,6 @@ Server::~Server()
     }
 }
 
-void Server::run()
-{
-    while (!g_sigint_received) {
-        int n_events = epoll_wait(epoll_fd_, events_, WEBSERV_MAX_EVENTS, -1);
-        if (n_events == -1) {
-            switch (errno) {
-            case EINTR:
-                // epoll_wait was interrupted by a signal, just move on as if
-                // nothing happened.
-                n_events = 0;
-                break;
-            default:
-                throw UnrecoverableError("epoll_wait", errno);
-            }
-        }
-
-        for (int i = 0; i < n_events; ++i) {
-            Client* conn = (Client*) events_[i].data.ptr;
-
-            // We set ev.data.ptr to NULL in the constructor, so we know for
-            // sure this notification is coming from the server socket.
-            if (conn == NULL) {
-                accept_connection();
-            }
-            else {
-                handle_events(conn, events_[i].events);
-            }
-        }
-    }
-}
-
 void Server::add_connection(Client* conn)
 {
     conn->set_next(list_head_);
@@ -155,16 +124,6 @@ void Server::accept_connection()
     add_connection(client);
 }
 
-void Server::handle_events(Client* conn, uint32_t events)
-{
-    if (events & EPOLLIN) {
-        receive_request(conn);
-    }
-    if (events & EPOLLOUT) {
-        send_response(conn);
-    }
-}
-
 static void print_http_request(const std::string& s)
 {
     std::cout << "< ";
@@ -185,6 +144,47 @@ static void print_http_request(const std::string& s)
         }
     }
     std::cout.flush();
+}
+
+void Server::run()
+{
+    while (!g_sigint_received) {
+        int n_events = epoll_wait(epoll_fd_, events_, WEBSERV_MAX_EVENTS, -1);
+        if (n_events == -1) {
+            switch (errno) {
+            case EINTR:
+                // epoll_wait was interrupted by a signal, just move on as if
+                // nothing happened.
+                n_events = 0;
+                break;
+            default:
+                throw UnrecoverableError("epoll_wait", errno);
+            }
+        }
+
+        for (int i = 0; i < n_events; ++i) {
+            Client* conn = (Client*) events_[i].data.ptr;
+
+            // We set ev.data.ptr to NULL in the constructor, so we know for
+            // sure this notification is coming from the server socket.
+            if (conn == NULL) {
+                accept_connection();
+            }
+            else {
+                handle_events(conn, events_[i].events);
+            }
+        }
+    }
+}
+
+void Server::handle_events(Client* conn, uint32_t events)
+{
+    if (events & EPOLLIN) {
+        receive_request(conn);
+    }
+    if (events & EPOLLOUT) {
+        send_response(conn);
+    }
 }
 
 void Server::receive_request(Client* conn)
