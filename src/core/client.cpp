@@ -5,11 +5,23 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+void Client::set_handler(Handler* handler)
+{
+    handler_ = handler;
+}
+
+// send buffer, if buffer empty then cal
+void Client::on_write()
+{
+}
+
 Client::Client(int fd, const sockaddr_in& addr)
     : fd_(fd),
       addr_(addr),
       prev_(NULL),
-      next_(NULL)
+      next_(NULL),
+      handler_(NULL)
+
 {
     set_nonblocking();
 }

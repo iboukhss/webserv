@@ -1,6 +1,7 @@
 #ifndef CORE_CLIENT_HPP_
 #define CORE_CLIENT_HPP_
 
+#include "../handler/handler.hpp"
 #include "http/http_request.hpp"
 #include "http/http_response.hpp"
 
@@ -19,9 +20,9 @@ public:
     void set_next(Client* conn) { next_ = conn; }
     void set_prev(Client* conn) { prev_ = conn; }
 
+    // getters
     int fd() const { return fd_; }
     const sockaddr_in& addr() const { return addr_; }
-
     const HttpRequest& req() const { return req_; }
     HttpResponse& res() { return res_; }
     std::string& recv_buffer() { return recv_buffer_; }
@@ -29,6 +30,11 @@ public:
 
     Client* next() { return next_; }
     Client* prev() { return prev_; }
+
+    void set_handler(Handler* handler);
+    void on_write();
+    void append_buffer(const std::string& data);
+    // void on_read();     TO DO(IBOUKH)
 
 private:
     Client();
@@ -44,6 +50,7 @@ private:
     std::string send_buffer_;
     Client* prev_;
     Client* next_;
+    Handler* handler_;
 };
 
 #endif // CORE_CLIENT_HPP_
