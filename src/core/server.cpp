@@ -1,6 +1,7 @@
 #include "core/server.hpp"
 
 #include "core/signals.hpp"
+#include "handler/file_handler.hpp"
 #include "http/http_request.hpp"
 #include "http/http_response.hpp"
 #include "router/router.hpp"
@@ -187,6 +188,7 @@ void Server::handle_events(Client* conn, uint32_t events)
     }
 }
 
+// also chunked requests will need to be handled
 void Server::receive_request(Client* conn)
 {
     int client_fd = conn->fd();
@@ -215,7 +217,11 @@ void Server::receive_request(Client* conn)
     // DHE: adding full_path variable to run make lint. The router_.handle_request() call needs to
     // be moved out
     std::string full_path;
-    router_.handle_request(conn, req, full_path);
+    if (!router_.handle_request(conn, req, full_path))
+        return; // bad request
+    if (req.method = "GET") {
+        // add handler to conn
+    }
 }
 
 void Server::send_response(Client* conn)
