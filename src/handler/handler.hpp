@@ -1,7 +1,7 @@
 #ifndef HANDLER_HANDLER_HPP_
 #define HANDLER_HANDLER_HPP_
 
-#include "src/core/client.hpp"
+#include "../core/client.hpp"
 
 #include <string>
 
@@ -10,11 +10,14 @@ public:
     explicit Handler(const std::string& path);
     virtual ~Handler();
 
-    virtual void onWritable() = 0;
-    bool isDone();
+    Handler(const Handler& other);
+    Handler& operator=(const Handler& other);
+
+    virtual void on_writable(Client* conn) = 0;
+    bool is_done();
 
 protected:
-    const std::string path_;
+    const std::string kPath;
 
 private:
     Handler();

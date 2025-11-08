@@ -1,13 +1,13 @@
 
-#include "Handler.hpp"
+#include "handler.hpp"
 
-bool Handler::isDone()
+bool Handler::is_done()
 {
     return (done_);
 }
 
 Handler::Handler(const std::string& path)
-    : path_(path),
+    : kPath(path),
       done_(false)
 {
 }

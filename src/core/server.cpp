@@ -219,7 +219,7 @@ void Server::receive_request(Client* conn)
     std::string full_path;
     if (!router_.handle_request(conn, req, full_path))
         return; // bad request
-    if (req.method = "GET") {
+    if (req.method == "GET") {
         // add handler to conn
         // conn.handler = New GetHandler(full_path);
     }

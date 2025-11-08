@@ -1,4 +1,4 @@
-#include "handler/get_handler.hpp"
+#include "get_handler.hpp"
 
 #include "sys/stat.h"
 
@@ -8,7 +8,7 @@
 #define BUFFER_SIZE 4096
 
 // check if file isOpen else continue stream to message_buffer
-void GetHandler::onWritable(Client* conn)
+void GetHandler::on_writable(Client* conn)
 {
     char buff[BUFFER_SIZE];
     int bytes_read = read(fd_, buff, BUFFER_SIZE);
