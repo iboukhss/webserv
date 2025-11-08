@@ -1,7 +1,7 @@
 #include "core/server.hpp"
 
 #include "core/signals.hpp"
-#include "handler/file_handler.hpp"
+#include "handler/get_handler.hpp"
 #include "http/http_request.hpp"
 #include "http/http_response.hpp"
 #include "router/router.hpp"
@@ -221,6 +221,7 @@ void Server::receive_request(Client* conn)
         return; // bad request
     if (req.method = "GET") {
         // add handler to conn
+        // conn.handler = New GetHandler(full_path);
     }
 }
 
