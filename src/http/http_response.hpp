@@ -1,6 +1,7 @@
 #ifndef HTTP_HTTP_RESPONSE_HPP_
 #define HTTP_HTTP_RESPONSE_HPP_
 
+#include <map>
 #include <string>
 
 enum HttpStatus {
@@ -15,6 +16,8 @@ enum HttpStatus {
 
 struct HttpResponse {
     int status;
+    std::map<std::string, std::string> headers;
+
     std::string content_type;
     std::string body;
     std::string to_string() const;
