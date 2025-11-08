@@ -8,7 +8,7 @@ UTEST(HttpResponseTest, BasicString)
     res.status = 200;
     res.content_type = "text/plain";
     res.headers["Content-Type"] = "text/plain";
-    res.body = "Hello World!";
+    res.body = "Hello, world!\n";
     std::string out = res.to_string();
 
     ASSERT_STREQ(out.c_str(), "HTTP/1.1 200 OK\r\n"
