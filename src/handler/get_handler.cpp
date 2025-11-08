@@ -14,7 +14,7 @@ void GetHandler::on_writable(Client* conn)
     int bytes_read = read(fd_, buff, BUFFER_SIZE);
     buff[bytes_read] = '\0';
     if (bytes_read > 0) {
-        conn->append_send_buffer(buff);
+        (conn->send_buffer()).append(buff);
     }
     else if (bytes_read == 0) {
         done_ = true;
