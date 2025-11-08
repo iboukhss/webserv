@@ -1,9 +1,8 @@
 #ifndef HANDLER_GET_HANDLER_HPP_
 #define HANDLER_GET_HANDLER_HPP_
 
-#include "Handler.hpp"
-#include "core/client.hpp"
-#include "src/core/client.hpp"
+#include "../core/client.hpp"
+#include "handler.hpp"
 #include "sys/stat.h"
 
 #include <string>
@@ -16,7 +15,7 @@ public:
     GetHandler(const GetHandler& other);
     GetHandler& operator=(const GetHandler& other);
 
-    void GetHandler::onWritable(Client* conn);
+    void on_writable(Client* conn);
 
 private:
     GetHandler();
