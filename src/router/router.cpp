@@ -86,7 +86,12 @@ std::string Router::build_request_path(const HttpRequest& request, const Locatio
 // Feel free to make any changes to that file.
 void Router::set_status(Client* conn, int status_code, const std::string& body)
 {
-    HttpResponse res = {status_code, "text/plain", body};
+    HttpResponse res;
+
+    res.status = status_code;
+    res.content_type = "text/plain";
+    res.headers["Content-Type"] = "text/plain";
+    res.body = body;
 
     conn->set_response(res);
 }
