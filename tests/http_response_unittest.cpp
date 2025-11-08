@@ -3,7 +3,12 @@
 
 UTEST(HttpResponseTest, BasicString)
 {
-    HttpResponse res = {200, "text/plain", "Hello, world!\n"};
+    HttpResponse res;
+
+    res.status = 200;
+    res.content_type = "text/plain";
+    res.headers["Content-Type"] = "text/plain";
+    res.body = "Hello World!";
     std::string out = res.to_string();
 
     ASSERT_STREQ(out.c_str(), "HTTP/1.1 200 OK\r\n"
