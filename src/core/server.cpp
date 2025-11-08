@@ -221,10 +221,19 @@ void Server::receive_request(Client* conn)
         return; // bad request
     if (req.method == "GET") {
         // add handler to conn
-        // conn.handler = New GetHandler(full_path);
+        GetHandler* handler = new GetHandler(conn, full_path);
+        conn->set_handler(handler);
     }
 }
 
+void Server::send_response(Client* conn)
+{
+    if (!conn->send_buffer().empty()) {
+        // send
+    }
+}
+
+/*
 void Server::send_response(Client* conn)
 {
     int client_fd = conn->fd();
@@ -238,4 +247,4 @@ void Server::send_response(Client* conn)
     }
 
     remove_connection(conn);
-}
+}*/
