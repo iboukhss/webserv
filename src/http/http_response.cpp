@@ -21,8 +21,12 @@ std::string HttpResponse::to_string() const
     /* clang-format on */
 
     out << "HTTP/1.1 " << status << " " << reason << "\r\n";
-    out << "Content-Type: " << content_type << "\r\n";
-    out << "Content-Length: " << body.size() << "\r\n";
+    for (std::map<std::string, std::string>::const_iterator it = headers.begin();
+         it != headers.end(); ++it) {
+        out << it->first << ": " << it->second << "\r\n";
+    }
+    if (headers.find("Content-Length") == headers.end())
+        out << "Content-Length: " << body.size() << "\r\n";
     out << "\r\n";
     out << body;
 
