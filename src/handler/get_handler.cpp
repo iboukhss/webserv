@@ -23,7 +23,7 @@ void GetHandler::on_writable(Client* conn)
     }
     else if (errno != EAGAIN && errno != EINTR) {
         done_ = true;
-        ::close(fd_);
+        close(fd_);
         // conn->res().set_error(500, "Read Error");
     }
 }
