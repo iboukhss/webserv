@@ -9,16 +9,19 @@
 
 class GetHandler : public Handler {
 public:
-    explicit GetHandler(const Client* conn, const std::string& path);
+    explicit GetHandler(Client* conn, const std::string& path);
     ~GetHandler();
 
     GetHandler(const GetHandler& other);
     GetHandler& operator=(const GetHandler& other);
 
     void on_writable(Client* conn);
+    void write_headers(Client* conn);
+    std::string derive_file_type();
 
 private:
     GetHandler();
+    std::string path_;
     int fd_;
     off_t size_;
     bool done_;
