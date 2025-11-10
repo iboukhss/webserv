@@ -20,7 +20,7 @@ SRCS      = $(addprefix $(SRC_DIR)/, \
             core/signals.cpp \
             core/signals.hpp \
             handler/handler.cpp \
-			handler/hanlder.hpp \
+			handler/handler.hpp \
 			handler/get_handler.cpp \
 			handler/get_handler.hpp \
 			http/http_request.hpp \
