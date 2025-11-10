@@ -1,1 +1,1 @@
-some secret data
+some secret data that should never be displayed in the browser
