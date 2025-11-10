@@ -2,6 +2,7 @@
 
 #include "sys/stat.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -70,8 +71,7 @@ GetHandler::GetHandler(Client* conn, const std::string& path)
     : Handler(path),
       fd_(-1),
       size_(0),
-      done_(false),
-      path_(path)
+      done_(false)
 {
     struct stat file_stat;
 

@@ -21,7 +21,6 @@ public:
 
 private:
     GetHandler();
-    std::string path_;
     int fd_;
     off_t size_;
     bool done_;
