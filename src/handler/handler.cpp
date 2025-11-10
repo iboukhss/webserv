@@ -7,7 +7,7 @@ bool Handler::is_done()
 }
 
 Handler::Handler(const std::string& path)
-    : kPath(path),
+    : path_(path),
       done_(false)
 {
 }

@@ -1,9 +1,11 @@
 #ifndef HANDLER_HANDLER_HPP_
 #define HANDLER_HANDLER_HPP_
 
-#include "../core/client.hpp"
+#include "core/client.hpp"
 
 #include <string>
+
+class Client;
 
 class Handler {
 public:
@@ -17,7 +19,7 @@ public:
     bool is_done();
 
 protected:
-    const std::string kPath;
+    std::string path_;
 
 private:
     Handler();
