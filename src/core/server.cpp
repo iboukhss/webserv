@@ -210,7 +210,7 @@ void Server::receive_request(Client* conn)
     // for dev, mimic a http request and call the routing function
     HttpRequest req;
     req.method = "GET";
-    req.path = "/files/norm42.txt";
+    req.path = "/files/42.txt";
 
     conn->set_request(req);
 
