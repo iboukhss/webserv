@@ -11,8 +11,30 @@ void Client::set_handler(Handler* handler)
 }
 
 // send buffer, if buffer empty then cal
-void Client::on_write()
+void Client::on_writable()
 {
+    if (handler_ && !handler_->is_done())
+        handler_->on_writable(this);
+}
+
+bool Client::handler_is_done()
+{
+    return (handler_->is_done());
+}
+
+void Client::flush_send_bufffer()
+{
+    if (send_buffer_.empty())
+        return;
+    // sending buffer
+    ssize_t n = send(fd_, send_buffer_.c_str(), send_buffer_.size(), 0);
+    // erase buffer
+    if (n > 0) {
+        send_buffer_.erase(0, send_buffer_.size());
+    }
+    else if (n == 0) {
+        // mark the client as closed
+    }
 }
 
 Client::Client(int fd, const sockaddr_in& addr)

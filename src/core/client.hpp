@@ -1,13 +1,15 @@
 #ifndef CORE_CLIENT_HPP_
 #define CORE_CLIENT_HPP_
 
-#include "../handler/handler.hpp"
+#include "handler/handler.hpp"
 #include "http/http_request.hpp"
 #include "http/http_response.hpp"
 
 #include <netinet/in.h>
 
 #include <string>
+
+class Handler;
 
 class Client {
 public:
@@ -27,14 +29,17 @@ public:
     HttpResponse& res() { return res_; }
     std::string& recv_buffer() { return recv_buffer_; }
     std::string& send_buffer() { return send_buffer_; }
-
     Client* next() { return next_; }
     Client* prev() { return prev_; }
 
+    // setters
     void set_handler(Handler* handler);
-    void on_write();
-    void append_buffer(const std::string& data);
-    // void on_read();     TO DO(IBOUKH)
+
+    // methods
+    void on_writable();
+    bool handler_is_done();
+    void flush_send_bufffer();
+    // void on_read(); ?     TO DO(IBOUKH)
 
 private:
     Client();
