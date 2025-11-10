@@ -210,7 +210,7 @@ void Server::receive_request(Client* conn)
     // for dev, mimic a http request and call the routing function
     HttpRequest req;
     req.method = "GET";
-    req.path = "/files/42.txt";
+    req.path = "/files/norm42.txt";
 
     conn->set_request(req);
 
@@ -228,8 +228,17 @@ void Server::receive_request(Client* conn)
 
 void Server::send_response(Client* conn)
 {
-    if (!conn->send_buffer().empty()) {
-        // send
+    conn->flush_send_bufffer();
+
+    if (conn->send_buffer().empty()) {
+        conn->on_writable();
+    }
+    if (conn->handler_is_done() && conn->send_buffer().empty()) {
+        // assuming HTTP/1.0 for testing
+        if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, conn->fd(), NULL) == -1) {
+            throw UnrecoverableError("epoll_ctl", errno);
+        }
+        remove_connection(conn);
     }
 }
 
