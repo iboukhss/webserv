@@ -53,6 +53,9 @@ Client::~Client()
     if (fd_ != -1) {
         close(fd_);
     }
+    if (handler_) {
+        delete (handler_);
+    }
 }
 
 void Client::set_nonblocking()
