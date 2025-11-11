@@ -5,6 +5,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <iostream>
+
 void Client::set_handler(Handler* handler)
 {
     handler_ = handler;
@@ -46,6 +48,7 @@ Client::Client(int fd, const sockaddr_in& addr)
 
 {
     set_nonblocking();
+    std::cout << "Client constructor called" << std::endl;
 }
 
 Client::~Client()
@@ -56,6 +59,7 @@ Client::~Client()
     if (handler_) {
         delete (handler_);
     }
+    std::cout << "Client destructor called" << std::endl;
 }
 
 void Client::set_nonblocking()

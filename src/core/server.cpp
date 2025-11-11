@@ -231,13 +231,16 @@ void Server::send_response(Client* conn)
     conn->flush_send_bufffer();
 
     if (conn->send_buffer().empty()) {
+        std::cout << "calling on writable" << std::endl;
         conn->on_writable();
     }
-    if (conn->handler_is_done() && conn->send_buffer().empty()) {
+    // if (conn->handler_is_done() && conn->send_buffer().empty()) {
+    if (conn->handler_is_done()) {
         // assuming HTTP/1.0 for testing
         if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, conn->fd(), NULL) == -1) {
             throw UnrecoverableError("epoll_ctl", errno);
         }
+        std::cout << "attempting to remove the connection" << std::endl;
         remove_connection(conn);
     }
 }
