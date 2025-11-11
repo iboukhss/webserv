@@ -23,7 +23,7 @@ private:
     GetHandler();
     int fd_;
     off_t size_;
-    bool done_;
+    // bool done_;
 };
 
 #endif

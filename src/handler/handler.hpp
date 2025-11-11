@@ -20,10 +20,10 @@ public:
 
 protected:
     std::string path_;
+    bool done_;
 
 private:
     Handler();
-    bool done_;
 };
 
 #endif

@@ -70,8 +70,8 @@ void GetHandler::write_headers(Client* conn)
 GetHandler::GetHandler(Client* conn, const std::string& path)
     : Handler(path),
       fd_(-1),
-      size_(0),
-      done_(false)
+      size_(0)
+// done_(false)
 {
     struct stat file_stat;
 
