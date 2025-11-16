@@ -1,9 +1,7 @@
 #include "core/server.hpp"
 
 #include "core/signals.hpp"
-#include "handler/get_handler.hpp"
 #include "http/http_request.hpp"
-#include "http/http_response.hpp"
 #include "router/router.hpp"
 #include "util/syscall_error.hpp"
 
@@ -12,6 +10,7 @@
 #include <netinet/in.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -125,28 +124,6 @@ void Server::accept_connection()
     add_connection(client);
 }
 
-static void print_http_request(const std::string& s)
-{
-    std::cout << "< ";
-
-    for (size_t i = 0; i < s.size(); ++i) {
-        char c = s[i];
-        if (c == '\r') {
-            std::cout << "\\r";
-        }
-        else if (c == '\n') {
-            std::cout << "\\n\n";
-            if (i < s.size() - 1) {
-                std::cout << "< ";
-            }
-        }
-        else {
-            std::cout.put(c);
-        }
-    }
-    std::cout.flush();
-}
-
 void Server::run()
 {
     while (!g_sigint_received) {
@@ -178,64 +155,84 @@ void Server::run()
     }
 }
 
+// Dirty hack
+static void print_raw_data(const std::string& s)
+{
+    std::cout << "< ";
+
+    for (size_t i = 0; i < s.size(); ++i) {
+        char c = s[i];
+        if (c == '\r') {
+            std::cout << "\\r";
+        }
+        else if (c == '\n') {
+            std::cout << "\\n\n";
+            if (i < s.size() - 1) {
+                std::cout << "< ";
+            }
+        }
+        else {
+            std::cout.put(c);
+        }
+    }
+    std::cout.flush();
+}
+
 void Server::handle_events(Client* conn, uint32_t events)
 {
+    int client_fd = conn->fd();
+    char tmp[4096];
+
+    // No handler yet, assume it's a new request (hardcoded for now)
+    if (!conn->handler()) {
+        HttpRequest req;
+        req.method = "GET";
+        req.path = "/files/42.txt";
+        conn->set_request(req);
+
+        Handler* h = router_.handle_request(conn->req());
+        conn->set_handler(h);
+    }
+
+    // Can read from socket
     if (events & EPOLLIN) {
-        receive_request(conn);
+        int n = recv(client_fd, tmp, sizeof(tmp), 0);
+        if (n == 0) {
+            epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client_fd, NULL);
+            remove_connection(conn);
+            return;
+        }
+        if (n > 0) {
+            conn->recv_buffer().append(tmp, n);
+
+            std::cout << "* Received from socket\n";
+            print_raw_data(conn->recv_buffer());
+
+            epoll_event ev;
+            ev.events = EPOLLOUT;
+            ev.data.ptr = conn;
+            epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, client_fd, &ev);
+        }
     }
+
+    // Can write to socket
     if (events & EPOLLOUT) {
-        send_response(conn);
+        if (conn->handler()->is_readable()) {
+            int n = conn->handler()->read_data(tmp, sizeof(tmp));
+            if (n > 0)
+                conn->send_buffer().append(tmp, n);
+        }
+
+        if (!conn->send_buffer().empty()) {
+            int n = send(client_fd, conn->send_buffer().data(), conn->send_buffer().size(), 0);
+            if (n > 0)
+                conn->send_buffer().erase(0, n);
+        }
+
+        if (conn->handler()->is_done() && conn->send_buffer().empty()) {
+            epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client_fd, NULL);
+            remove_connection(conn);
+            return;
+        }
     }
-}
-
-// also chunked requests will need to be handled
-void Server::receive_request(Client* conn)
-{
-    int client_fd = conn->fd();
-    char buf[4096];
-
-    int n_bytes = recv(client_fd, buf, sizeof(buf), 0);
-    conn->recv_buffer().append(buf, n_bytes);
-
-    std::cout << "* Request received\n";
-
-    print_http_request(conn->recv_buffer());
-
-    epoll_event ev;
-    ev.events = EPOLLOUT;
-    ev.data.ptr = conn;
-    epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, client_fd, &ev);
-
-    // reading from socket and storing request in Client (TO DO : IBOUKHSS)
-    // for dev, mimic a http request and call the routing function
-    HttpRequest req;
-    req.method = "GET";
-    req.path = "/files/42.txt";
-
-    conn->set_request(req);
-
-    // DHE: adding full_path variable to run make lint. The router_.handle_request() call needs to
-    // be moved out
-    std::string full_path;
-    if (!router_.handle_request(conn, req, full_path))
-        return; // bad request
-    if (req.method == "GET") {
-        // add handler to conn
-        // conn.handler = New GetHandler(full_path);
-    }
-}
-
-void Server::send_response(Client* conn)
-{
-    int client_fd = conn->fd();
-    HttpResponse res = conn->res();
-    std::string raw = res.to_string();
-
-    send(client_fd, raw.data(), raw.size(), 0);
-
-    if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client_fd, NULL) == -1) {
-        throw UnrecoverableError("epoll_ctl", errno);
-    }
-
-    remove_connection(conn);
 }

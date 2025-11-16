@@ -1,27 +1,44 @@
 #ifndef HANDLER_GET_HANDLER_HPP_
 #define HANDLER_GET_HANDLER_HPP_
 
-#include "../core/client.hpp"
-#include "handler.hpp"
-#include "sys/stat.h"
+#include "handler/handler.hpp"
+
+#include <sys/stat.h>
 
 #include <string>
 
 class GetHandler : public Handler {
 public:
-    explicit GetHandler(const Client* conn, const std::string& path);
-    ~GetHandler();
+    explicit GetHandler(const std::string& path);
+    virtual ~GetHandler();
 
-    GetHandler(const GetHandler& other);
-    GetHandler& operator=(const GetHandler& other);
+    virtual int read_data(char* buf, int n);
+    virtual int write_data(const char* buf, int n);
 
-    void on_writable(Client* conn);
+    virtual bool is_readable() const { return !is_done(); } // read until done
+    virtual bool is_writable() const { return false; };     // handler is read-only
+    virtual bool is_done() const
+    {
+        return (has_body() && body_sent()) || (!has_body() && headers_sent());
+    };
+
+    const std::string kFilePath;
 
 private:
-    GetHandler();
+    GetHandler(const GetHandler&);
+    GetHandler& operator=(const GetHandler&);
+
+    bool has_body() const { return fd_ != -1; }
+    bool headers_sent() const { return headers_off_ == headers_.size(); }
+    bool body_sent() const { return eof_reached_; }
+
+    const std::string derive_file_type();
+
     int fd_;
-    off_t size_;
-    bool done_;
+    off_t file_size_;
+    bool eof_reached_;
+    std::string headers_;
+    size_t headers_off_;
 };
 
 #endif

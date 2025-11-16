@@ -20,7 +20,6 @@ public:
     void run();
 
     void handle_events(Client* conn, uint32_t events);
-    void handle_request(Client* conn, const HttpRequest& request);
 
     void accept_connection();
     void add_connection(Client* conn);
