@@ -11,7 +11,7 @@ void test_config1(ServerConfig& config)
     // ------------------------
     config.listen_port = 8080;
     config.default_server = true;
-    config.root = "/home/dennis/Documents/42Luxembourg/Core/webserv";
+    config.root = "www/site1";
     config.domain = AF_INET;
     config.max_conn = 1000;
     config.protocol = "http";
@@ -31,7 +31,7 @@ void test_config1(ServerConfig& config)
     // ------------------------
     // Default location
     // ------------------------
-    config.default_location.path = "/home/dennis/Documents/42Luxembourg/Core/webserv";
+    config.default_location.path = "";
     config.default_location.index = "index.html";
 
     // ------------------------

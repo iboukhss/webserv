@@ -2,9 +2,8 @@
 
 #include "config/server_config.hpp"
 #include "core/client.hpp"
-#include "core/server.hpp"
+#include "handler/get_handler.hpp"
 #include "http/http_request.hpp"
-#include "http/http_response.hpp"
 
 #include <sys/stat.h>
 
@@ -13,10 +12,6 @@
 
 Router::Router(ServerConfig& config)
     : config_(config)
-{
-}
-
-Router::~Router()
 {
 }
 
@@ -82,37 +77,33 @@ std::string Router::build_request_path(const HttpRequest& request, const Locatio
     return (full_path);
 }
 
-// NOTE(IBO): HttpResponse already has a member function to create the raw response.
-// Feel free to make any changes to that file.
-void Router::set_status(Client* conn, int status_code, const std::string& body)
-{
-    HttpResponse res;
-
-    res.status = status_code;
-    res.content_type = "text/plain";
-    res.headers["Content-Type"] = "text/plain";
-    res.body = body;
-
-    conn->set_response(res);
-}
-
-// NOTE(IBO): Maybe we don't even need to pass a const HttpRequest? And just use the
-// stored request with conn->req(), very minor detail.
-bool Router::handle_request(Client* conn, const HttpRequest& request, std::string& full_path)
+Handler* Router::handle_request(const HttpRequest& request)
 {
     if (!is_valid_method(request.method)) {
-        set_status(conn, kMethodNotAllowed, ""); // in the end should be done
-        return (false);
+        // kNotAllowed? create a new ErrorHandler maybe?
+        std::cerr << "Invalid method not implemented" << std::endl;
+        return NULL;
     }
     if (request.path.empty()) {
-        set_status(conn, kBadRequest, "");
-        return (false);
+        // kBadRequest? same thing
+        std::cerr << "Bad request not implemented" << std::endl;
+        return NULL;
     }
+
     const Location* longest_match = routing(request.path);
     if (!longest_match) {
-        set_status(conn, kNotFound, "");
-        return (false);
+        // kNotFound? no match?
+        std::cerr << "No match found not implemented" << std::endl;
+        return NULL;
     }
-    full_path = build_request_path(request, longest_match);
-    return (true);
+    std::string full_path = build_request_path(request, longest_match);
+    if (request.method == "GET") {
+        return new GetHandler(full_path);
+    }
+
+    // Add other handlers here
+
+    // Fallback, should never happen in theory
+    std::cerr << "Something terrible happened in the router" << std::endl;
+    return NULL;
 }
