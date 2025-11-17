@@ -112,6 +112,10 @@ TEST_SRCS    = $(addprefix $(TEST_SRC_DIR)/, \
                static_file_handler_unittest.cpp \
                str_split_unittest.cpp \
                main.cpp \
+			   error_handler_unittest.cpp \
+               http_response_unittest.cpp \
+			   router_unittest.cpp \
+               main.cpp \
 )
 
 TEST_CPPS    = $(filter %.cpp,$(TEST_SRCS))
