@@ -93,6 +93,7 @@ TEST_TARGET  = $(BIN_DIR)/$(TEST_NAME)
 # All tests sources (keep in alphabetical order)
 TEST_SRCS    = $(addprefix $(TEST_SRC_DIR)/, \
                http_response_unittest.cpp \
+			   router_unittest.cpp \
                main.cpp \
 )
 
