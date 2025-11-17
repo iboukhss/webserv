@@ -14,6 +14,9 @@ public:
     virtual bool is_writable() const { return false; };     // handler is read-only
     virtual bool is_done() const { return (true); };
 
+    virtual int read_data(char* buf, int n) { return (0); };
+    virtual int write_data(const char* buf, int n) { return (0); };
+
     int get_error_code();
 
 private:
