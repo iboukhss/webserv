@@ -7,10 +7,10 @@
 
 #include <string>
 
-class GetHandler : public Handler {
+class StaticFileHandler : public Handler {
 public:
-    explicit GetHandler(const std::string& path);
-    virtual ~GetHandler();
+    explicit StaticFileHandler(const std::string& path);
+    virtual ~StaticFileHandler();
 
     virtual int read_data(char* buf, int n);
     virtual int write_data(const char* buf, int n);
@@ -22,8 +22,8 @@ public:
     const std::string kFilePath;
 
 private:
-    GetHandler(const GetHandler&);
-    GetHandler& operator=(const GetHandler&);
+    StaticFileHandler(const StaticFileHandler&);
+    StaticFileHandler& operator=(const StaticFileHandler&);
 
     bool has_body() const { return fd_ != -1; }
     bool headers_sent() const { return headers_off_ == headers_.size(); }

@@ -1,8 +1,7 @@
 #include "router/router.hpp"
 
 #include "config/server_config.hpp"
-#include "core/client.hpp"
-#include "handler/get_handler.hpp"
+#include "handler/static_file_handler.hpp"
 #include "http/http_request.hpp"
 
 #include <sys/stat.h>
@@ -98,7 +97,7 @@ Handler* Router::handle_request(const HttpRequest& request)
     }
     std::string full_path = build_request_path(request, longest_match);
     if (request.method == "GET") {
-        return new GetHandler(full_path);
+        return new StaticFileHandler(full_path);
     }
 
     // Add other handlers here

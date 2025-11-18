@@ -1,4 +1,4 @@
-#include "handler/get_handler.hpp"
+#include "handler/static_file_handler.hpp"
 
 #include "http/http_response.hpp"
 #include "util/syscall_error.hpp"
@@ -11,7 +11,7 @@
 #include <iostream>
 #include <sstream>
 
-GetHandler::GetHandler(const std::string& path)
+StaticFileHandler::StaticFileHandler(const std::string& path)
     : kFilePath(path),
       fd_(-1),
       file_size_(0),
@@ -51,13 +51,13 @@ GetHandler::GetHandler(const std::string& path)
     headers_ = res.to_string();
 }
 
-GetHandler::~GetHandler()
+StaticFileHandler::~StaticFileHandler()
 {
     if (fd_ != -1)
         close(fd_);
 }
 
-int GetHandler::read_data(char* buf, int n)
+int StaticFileHandler::read_data(char* buf, int n)
 {
     int bytes_written = 0;
 
@@ -88,14 +88,14 @@ int GetHandler::read_data(char* buf, int n)
 }
 
 // We never write to this handler (read-only)
-int GetHandler::write_data(const char* buf, int n)
+int StaticFileHandler::write_data(const char* buf, int n)
 {
     (void) buf;
     (void) n;
     return 0;
 }
 
-const std::string GetHandler::derive_file_type()
+const std::string StaticFileHandler::derive_file_type()
 {
     size_t pos = kFilePath.rfind(".");
     if (pos == std::string::npos)

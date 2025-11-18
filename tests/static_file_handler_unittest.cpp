@@ -1,4 +1,4 @@
-#include "handler/get_handler.hpp"
+#include "handler/static_file_handler.hpp"
 #include "utest/utest.h"
 
 #include <iostream>
@@ -10,7 +10,7 @@
 UTEST(GetHandlerTest, StatusOk)
 {
     char buf[4096] = {0};
-    GetHandler test("www/example/index.html");
+    StaticFileHandler test("www/example/index.html");
 
     test.read_data(buf, sizeof(buf));
 
@@ -25,7 +25,7 @@ UTEST(GetHandlerTest, StatusOk)
 UTEST(GetHandlerTest, StatusNotFound)
 {
     char buf[4096] = {0};
-    GetHandler test("www/example/inexistant.html");
+    StaticFileHandler test("www/example/inexistant.html");
 
     test.read_data(buf, sizeof(buf));
 
@@ -35,7 +35,7 @@ UTEST(GetHandlerTest, StatusNotFound)
 UTEST(GetHandlerTest, ReadSomeData)
 {
     char buf[4096] = {0};
-    GetHandler test("");
+    StaticFileHandler test("");
 
     EXPECT_TRUE(test.has_output());
     EXPECT_FALSE(test.needs_input());
@@ -45,7 +45,7 @@ UTEST(GetHandlerTest, ReadSomeData)
 UTEST(GetHandlerTest, WriteNoData)
 {
     char msg[] = "Hello, world!\n";
-    GetHandler test("");
+    StaticFileHandler test("");
 
     EXPECT_TRUE(test.has_output());
     EXPECT_FALSE(test.needs_input());
@@ -55,7 +55,7 @@ UTEST(GetHandlerTest, WriteNoData)
 UTEST(GetHandlerTest, SmallBuffer)
 {
     char buf[1] = {0};
-    GetHandler test("www/example/index.html");
+    StaticFileHandler test("www/example/index.html");
 
     std::string res;
 
