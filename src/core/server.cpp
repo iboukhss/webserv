@@ -217,7 +217,7 @@ void Server::handle_events(Client* conn, uint32_t events)
 
     // Can write to socket
     if (events & EPOLLOUT) {
-        if (conn->handler()->is_readable()) {
+        if (conn->handler()->has_output()) {
             int n = conn->handler()->read_data(tmp, sizeof(tmp));
             if (n > 0)
                 conn->send_buffer().append(tmp, n);

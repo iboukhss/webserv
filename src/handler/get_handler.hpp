@@ -15,12 +15,9 @@ public:
     virtual int read_data(char* buf, int n);
     virtual int write_data(const char* buf, int n);
 
-    virtual bool is_readable() const { return !is_done(); } // read until done
-    virtual bool is_writable() const { return false; };     // handler is read-only
-    virtual bool is_done() const
-    {
-        return (has_body() && body_sent()) || (!has_body() && headers_sent());
-    };
+    virtual bool has_output() const { return !headers_sent() || (has_body() && !body_sent()); }
+    virtual bool needs_input() const { return false; };
+    virtual bool is_done() const { return !has_output(); }
 
     const std::string kFilePath;
 

@@ -1,4 +1,4 @@
-#################################################################################
+################################################################################
 # Project setup
 
 NAME      = webserv
@@ -19,15 +19,15 @@ SRCS      = $(addprefix $(SRC_DIR)/, \
             core/server.hpp \
             core/signals.cpp \
             core/signals.hpp \
+            handler/get_handler.cpp \
+            handler/get_handler.hpp \
             handler/handler.cpp \
-			handler/handler.hpp \
-			handler/get_handler.cpp \
-			handler/get_handler.hpp \
-			http/http_request.hpp \
+            handler/handler.hpp \
+            http/http_request.hpp \
             http/http_response.cpp \
             http/http_response.hpp \
             router/router.cpp \
-			router/router.hpp \
+            router/router.hpp \
             util/syscall_error.cpp \
             util/syscall_error.hpp \
             main.cpp \
@@ -80,7 +80,7 @@ fclean: clean
 
 re: fclean all
 
-#################################################################################
+################################################################################
 # Unit tests
 
 TEST_NAME    = run_tests
@@ -93,7 +93,8 @@ TEST_TARGET  = $(BIN_DIR)/$(TEST_NAME)
 # All tests sources (keep in alphabetical order)
 TEST_SRCS    = $(addprefix $(TEST_SRC_DIR)/, \
                http_response_unittest.cpp \
-			   router_unittest.cpp \
+               router_unittest.cpp \
+               static_file_handler_unittest.cpp \
                main.cpp \
 )
 
@@ -122,7 +123,7 @@ PHONY += test-clean
 test-clean:
 	rm -rf $(TEST_OBJ_DIR) $(TEST_TARGET)
 
-#################################################################################
+################################################################################
 # Formatting and linting section
 
 # If compiledb is not installed do `pipx install compiledb`.
