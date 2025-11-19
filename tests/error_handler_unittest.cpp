@@ -19,16 +19,16 @@ UTEST(ErrorHandlerTest, is_done)
     delete (handler);
 }
 
-UTEST(ErrorHandlerTest, is_readable)
+UTEST(ErrorHandlerTest, has_output)
 {
     ErrorHandler* handler = new ErrorHandler(123);
-    ASSERT_FALSE(handler->is_readable());
+    ASSERT_FALSE(handler->has_output());
     delete (handler);
 }
 
-UTEST(ErrorHandlerTest, is_writable)
+UTEST(ErrorHandlerTest, needs_)
 {
     ErrorHandler* handler = new ErrorHandler(123);
-    ASSERT_FALSE(handler->is_writable());
+    ASSERT_FALSE(handler->needs_input());
     delete (handler);
 }
