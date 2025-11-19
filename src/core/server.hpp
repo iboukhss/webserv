@@ -3,7 +3,6 @@
 
 #include "config/server_config.hpp"
 #include "core/client.hpp"
-#include "http/http_request.hpp"
 #include "router/router.hpp"
 
 #include <netinet/in.h>
@@ -19,16 +18,13 @@ public:
 
     void run();
 
-    void handle_events(Client* conn, uint32_t events);
+    void handle_events(Client& conn, uint32_t events);
 
     void accept_connection();
-    void add_connection(Client* conn);
-    void remove_connection(Client* conn);
+    void remove_connection(uint64_t id);
 
-    void receive_request(Client* conn);
-    void send_response(Client* conn);
-
-    int fd() { return fd_; }
+    int fd() const { return fd_; }
+    Client& get_client(uint64_t id);
 
 private:
     Server(const Server& other);
@@ -42,6 +38,8 @@ private:
     epoll_event events_[WEBSERV_MAX_EVENTS];
     Client* list_head_;
     Router router_;
+    std::map<uint64_t, Client*> clients_;
+    uint64_t next_id_;
 };
 
 #endif // CORE_SERVER_HPP_

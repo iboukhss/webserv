@@ -7,11 +7,10 @@
 
 #include <iostream>
 
-Client::Client(int fd, const sockaddr_in& addr)
-    : fd_(fd),
+Client::Client(uint64_t id, int fd, const sockaddr_in& addr)
+    : id_(id),
+      fd_(fd),
       addr_(addr),
-      prev_(NULL),
-      next_(NULL),
       handler_(NULL)
 
 {

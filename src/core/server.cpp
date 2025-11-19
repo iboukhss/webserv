@@ -20,7 +20,8 @@
 
 Server::Server(in_addr_t ip, in_port_t port, int limit_conn, ServerConfig& config)
     : config_(config),
-      router_(config)
+      router_(config),
+      next_id_(1)
 {
     fd_ = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
     if (fd_ == -1) {
@@ -40,27 +41,18 @@ Server::Server(in_addr_t ip, in_port_t port, int limit_conn, ServerConfig& confi
     }
 
     epoll_fd_ = epoll_create1(0);
-    if (epoll_fd_ == -1) {
-        throw UnrecoverableError("epoll_create1", errno);
-    }
 
     epoll_event ev;
     ev.events = EPOLLIN;
-    ev.data.ptr = NULL;
-
-    if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd_, &ev) == -1) {
-        throw UnrecoverableError("epoll_ctl", errno);
-    }
-
-    list_head_ = NULL;
+    ev.data.u64 = 0;
+    epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd_, &ev);
 }
 
 Server::~Server()
 {
-    while (list_head_) {
-        Client* conn = list_head_;
-        list_head_ = list_head_->next();
-        delete conn;
+    for (std::map<uint64_t, Client*>::const_iterator it = clients_.begin(); it != clients_.end();
+         ++it) {
+        delete it->second;
     }
     if (epoll_fd_ != -1) {
         close(epoll_fd_);
@@ -70,31 +62,24 @@ Server::~Server()
     }
 }
 
-void Server::add_connection(Client* conn)
+Client& Server::get_client(uint64_t id)
 {
-    conn->set_next(list_head_);
-    if (list_head_) {
-        list_head_->set_prev(conn);
+    std::map<uint64_t, Client*>::iterator it = clients_.find(id);
+    if (it == clients_.end()) {
+        throw std::runtime_error("[FATAL] Attempted to retrieve inexistant client id");
     }
-    list_head_ = conn;
+    return *(it->second);
 }
 
-void Server::remove_connection(Client* conn)
+void Server::remove_connection(uint64_t id)
 {
-    Client* prev = conn->prev();
-    Client* next = conn->next();
-
-    if (prev) {
-        prev->set_next(conn->next());
+    std::map<uint64_t, Client*>::iterator it = clients_.find(id);
+    if (it == clients_.end()) {
+        std::cerr << "[WARNING] Attempted to remove inexistant client id" << std::endl;
+        return;
     }
-    if (next) {
-        next->set_prev(conn->prev());
-    }
-    if (conn == list_head_) {
-        list_head_ = next;
-    }
-
-    delete conn;
+    delete it->second;
+    clients_.erase(id);
 }
 
 // extracts the  first  connection  request  on  the  queue
@@ -109,19 +94,18 @@ void Server::accept_connection()
         return;
     }
 
-    std::cout << "* Connection established\n";
+    uint64_t client_id = next_id_++;
+    Client* client = new Client(client_id, client_fd, addr);
 
-    Client* client = new Client(client_fd, addr);
+    clients_[client_id] = client;
 
     epoll_event ev;
     ev.events = EPOLLIN;
-    ev.data.ptr = client;
+    ev.data.u64 = client_id;
 
-    if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, client_fd, &ev) == -1) {
-        throw UnrecoverableError("epoll_ctl", errno);
-    }
+    epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, client_fd, &ev);
 
-    add_connection(client);
+    std::cout << "* Connection established, client_id = " << client_id << std::endl;
 }
 
 void Server::run()
@@ -141,15 +125,15 @@ void Server::run()
         }
 
         for (int i = 0; i < n_events; ++i) {
-            Client* conn = (Client*) events_[i].data.ptr;
+            uint32_t ev = events_[i].events;
+            uint64_t id = events_[i].data.u64;
 
-            // We set ev.data.ptr to NULL in the constructor, so we know for
-            // sure this notification is coming from the server socket.
-            if (conn == NULL) {
+            if (id == 0) {
                 accept_connection();
             }
             else {
-                handle_events(conn, events_[i].events);
+                Client& client = get_client(id);
+                handle_events(client, ev);
             }
         }
     }
@@ -178,60 +162,59 @@ static void print_raw_data(const std::string& s)
     std::cout.flush();
 }
 
-void Server::handle_events(Client* conn, uint32_t events)
+void Server::handle_events(Client& conn, uint32_t events)
 {
-    int client_fd = conn->fd();
     char tmp[4096];
 
     // No handler yet, assume it's a new request (hardcoded for now)
-    if (!conn->handler()) {
+    if (!conn.handler()) {
         HttpRequest req;
         req.method = "GET";
         req.path = "/files/42.txt";
-        conn->set_request(req);
+        conn.set_request(req);
 
-        Handler* h = router_.handle_request(conn->req());
-        conn->set_handler(h);
+        Handler* h = router_.handle_request(conn.req());
+        conn.set_handler(h);
     }
 
     // Can read from socket
     if (events & EPOLLIN) {
-        int n = recv(client_fd, tmp, sizeof(tmp), 0);
+        int n = recv(conn.fd(), tmp, sizeof(tmp), 0);
         if (n == 0) {
-            epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client_fd, NULL);
-            remove_connection(conn);
+            epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, conn.fd(), NULL);
+            remove_connection(conn.id());
             return;
         }
         if (n > 0) {
-            conn->recv_buffer().append(tmp, n);
+            conn.recv_buffer().append(tmp, n);
 
             std::cout << "* Received from socket\n";
-            print_raw_data(conn->recv_buffer());
+            print_raw_data(conn.recv_buffer());
 
             epoll_event ev;
             ev.events = EPOLLOUT;
-            ev.data.ptr = conn;
-            epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, client_fd, &ev);
+            ev.data.u64 = conn.id();
+            epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, conn.fd(), &ev);
         }
     }
 
     // Can write to socket
     if (events & EPOLLOUT) {
-        if (conn->handler()->has_output()) {
-            int n = conn->handler()->read_data(tmp, sizeof(tmp));
+        if (conn.handler()->has_output()) {
+            int n = conn.handler()->read_data(tmp, sizeof(tmp));
             if (n > 0)
-                conn->send_buffer().append(tmp, n);
+                conn.send_buffer().append(tmp, n);
         }
 
-        if (!conn->send_buffer().empty()) {
-            int n = send(client_fd, conn->send_buffer().data(), conn->send_buffer().size(), 0);
+        if (!conn.send_buffer().empty()) {
+            int n = send(conn.fd(), conn.send_buffer().data(), conn.send_buffer().size(), 0);
             if (n > 0)
-                conn->send_buffer().erase(0, n);
+                conn.send_buffer().erase(0, n);
         }
 
-        if (conn->handler()->is_done() && conn->send_buffer().empty()) {
-            epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client_fd, NULL);
-            remove_connection(conn);
+        if (conn.handler()->is_done() && conn.send_buffer().empty()) {
+            epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, conn.fd(), NULL);
+            remove_connection(conn.id());
             return;
         }
     }
