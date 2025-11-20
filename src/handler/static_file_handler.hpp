@@ -19,8 +19,6 @@ public:
     virtual bool needs_input() const { return false; };
     virtual bool is_done() const { return !has_output(); }
 
-    const std::string kFilePath;
-
 private:
     StaticFileHandler(const StaticFileHandler&);
     StaticFileHandler& operator=(const StaticFileHandler&);
@@ -30,6 +28,8 @@ private:
     bool body_sent() const { return eof_reached_; }
 
     const std::string derive_file_type();
+
+    const std::string file_path_;
 
     int fd_;
     off_t file_size_;

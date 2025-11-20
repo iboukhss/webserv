@@ -18,34 +18,13 @@
 #include <cstring>
 #include <iostream>
 
-Server::Server(in_addr_t ip, in_port_t port, int limit_conn, ServerConfig& config)
+Server::Server(const ServerConfig& config)
     : config_(config),
-      router_(config),
-      next_id_(1)
+      fd_(-1),
+      epoll_fd_(-1),
+      next_id_(1),
+      router_(config)
 {
-    fd_ = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
-    if (fd_ == -1) {
-        throw UnrecoverableError("socket", errno);
-    }
-
-    addr_.sin_family = AF_INET;
-    addr_.sin_port = htons(port);
-    addr_.sin_addr.s_addr = htonl(ip);
-
-    if (::bind(fd_, (sockaddr*) &addr_, sizeof(addr_)) == -1) {
-        throw UnrecoverableError("bind", errno);
-    }
-
-    if (::listen(fd_, limit_conn) == -1) {
-        throw UnrecoverableError("listen", errno);
-    }
-
-    epoll_fd_ = epoll_create1(0);
-
-    epoll_event ev;
-    ev.events = EPOLLIN;
-    ev.data.u64 = 0;
-    epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd_, &ev);
 }
 
 Server::~Server()
@@ -62,13 +41,38 @@ Server::~Server()
     }
 }
 
-Client& Server::get_client(uint64_t id)
+void Server::init()
 {
-    std::map<uint64_t, Client*>::iterator it = clients_.find(id);
-    if (it == clients_.end()) {
-        throw std::runtime_error("[FATAL] Attempted to retrieve inexistant client id");
-    }
-    return *(it->second);
+    fd_ = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+
+    // Make debugging less painful with bind: Address already in use
+    int yes = 1;
+    setsockopt(fd_, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+    setsockopt(fd_, SOL_SOCKET, SO_REUSEPORT, &yes, sizeof(yes));
+
+    addr_.sin_family = AF_INET;
+    addr_.sin_port = htons(config_.listen_port);
+    addr_.sin_addr.s_addr = htonl(config_.server_ip);
+
+    bind(fd_, (sockaddr*) &addr_, sizeof(addr_));
+    listen(fd_, config_.backlog);
+
+    epoll_fd_ = epoll_create1(0);
+
+    epoll_event ev;
+    ev.events = EPOLLIN;
+    ev.data.u64 = 0;
+    epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd_, &ev);
+}
+
+uint64_t Server::add_connection(int client_fd, const sockaddr_in& addr)
+{
+    uint64_t client_id = next_id_++;
+    Client* client = new Client(client_id, client_fd, addr);
+
+    clients_[client_id] = client;
+
+    return client_id;
 }
 
 void Server::remove_connection(uint64_t id)
@@ -80,6 +84,15 @@ void Server::remove_connection(uint64_t id)
     }
     delete it->second;
     clients_.erase(id);
+}
+
+Client& Server::get_client(uint64_t id)
+{
+    std::map<uint64_t, Client*>::iterator it = clients_.find(id);
+    if (it == clients_.end()) {
+        throw std::runtime_error("[FATAL] Attempted to retrieve inexistant client id");
+    }
+    return *(it->second);
 }
 
 // extracts the  first  connection  request  on  the  queue
@@ -94,15 +107,11 @@ void Server::accept_connection()
         return;
     }
 
-    uint64_t client_id = next_id_++;
-    Client* client = new Client(client_id, client_fd, addr);
-
-    clients_[client_id] = client;
+    uint64_t client_id = add_connection(client_fd, addr);
 
     epoll_event ev;
     ev.events = EPOLLIN;
     ev.data.u64 = client_id;
-
     epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, client_fd, &ev);
 
     std::cout << "* Connection established, client_id = " << client_id << std::endl;

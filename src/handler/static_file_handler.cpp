@@ -12,7 +12,7 @@
 #include <sstream>
 
 StaticFileHandler::StaticFileHandler(const std::string& path)
-    : kFilePath(path),
+    : file_path_(path),
       fd_(-1),
       file_size_(0),
       eof_reached_(false),
@@ -97,11 +97,11 @@ int StaticFileHandler::write_data(const char* buf, int n)
 
 const std::string StaticFileHandler::derive_file_type()
 {
-    size_t pos = kFilePath.rfind(".");
+    size_t pos = file_path_.rfind(".");
     if (pos == std::string::npos)
         return ("application/octet-stream");
 
-    std::string ext = kFilePath.substr(pos + 1);
+    std::string ext = file_path_.substr(pos + 1);
     if (ext == "html" || ext == "htm")
         return "text/html";
     else if (ext == "txt")

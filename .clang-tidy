@@ -6,34 +6,48 @@ Checks:
   - 'cppcoreguidelines-init-variables'
 
 CheckOptions:
-  # CamelCase classes, types, structs and enums
+  # Classes, structs, enums, typedefs
   - key: readability-identifier-naming.ClassCase
-    value: CamelCase
-  - key: readability-identifier-naming.TypedefCase
     value: CamelCase
   - key: readability-identifier-naming.EnumCase
     value: CamelCase
   - key: readability-identifier-naming.StructCase
     value: CamelCase
+  - key: readability-identifier-naming.TypedefCase
+    value: CamelCase
 
-  # lower_case functions and variables
+  # Functions, variables
   - key: readability-identifier-naming.FunctionCase
     value: lower_case
   - key: readability-identifier-naming.VariableCase
     value: lower_case
 
-  # Underscore suffix for private members (foo_)
+  # Private members
+  - key: readability-identifier-naming.PrivateMemberCase
+    value: lower_case
   - key: readability-identifier-naming.PrivateMemberSuffix
     value: _
 
-  # g_ prefix for global variables (g_foo)
+  # Global variables
+  - key: readability-identifier-naming.GlobalVariableCase
+    value: lower_case
   - key: readability-identifier-naming.GlobalVariablePrefix
     value: g_
 
-  # CamelCase constants with k prefix (kMaxConnections)
-  - key: readability-identifier-naming.ConstantCase
+  # Enum constants
+  - key: readability-identifier-naming.EnumConstantCase
     value: CamelCase
-  - key: readability-identifier-naming.ConstantPrefix
+  - key: readability-identifier-naming.EnumConstantPrefix
+    value: k
+  # Global constants
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.GlobalConstantPrefix
+    value: k
+  # Static constants
+  - key: readability-identifier-naming.StaticConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.StaticConstantPrefix
     value: k
 
   # Rule of three / orthodox cannonical form

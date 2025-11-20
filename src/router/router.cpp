@@ -9,7 +9,7 @@
 #include <iostream>
 #include <string>
 
-Router::Router(ServerConfig& config)
+Router::Router(const ServerConfig& config)
     : config_(config)
 {
 }

@@ -13,33 +13,35 @@
 
 class Server {
 public:
-    Server(in_addr_t ip, in_port_t port, int limit_conn, ServerConfig& config);
+    explicit Server(const ServerConfig& config);
     ~Server();
 
+    void init();
     void run();
 
-    void handle_events(Client& conn, uint32_t events);
-
-    void accept_connection();
-    void remove_connection(uint64_t id);
-
     int fd() const { return fd_; }
-    Client& get_client(uint64_t id);
 
 private:
     Server(const Server& other);
     Server& operator=(const Server& other);
 
-private:
-    ServerConfig config_; // I agree, the config should be const, just a temp change
+    void accept_connection();
+    void handle_events(Client& conn, uint32_t events);
+
+    uint64_t add_connection(int client_fd, const sockaddr_in& addr);
+    void remove_connection(uint64_t id);
+
+    Client& get_client(uint64_t id);
+
+    const ServerConfig config_;
+
     int fd_;
     sockaddr_in addr_;
     int epoll_fd_;
     epoll_event events_[WEBSERV_MAX_EVENTS];
-    Client* list_head_;
-    Router router_;
     std::map<uint64_t, Client*> clients_;
     uint64_t next_id_;
+    Router router_;
 };
 
 #endif // CORE_SERVER_HPP_

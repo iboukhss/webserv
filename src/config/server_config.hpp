@@ -1,6 +1,8 @@
 #ifndef CONFIG_SERVER_CONFIG_HPP_
 #define CONFIG_SERVER_CONFIG_HPP_
 
+#include <netinet/in.h>
+
 #include <string>
 #include <vector>
 
@@ -11,18 +13,21 @@ struct Location {
 };
 
 struct ServerConfig {
-    int listen_port;                      // port to listen
+    in_addr_t server_ip;   // server ip
+    in_port_t listen_port; // server listen port
+    int backlog;           // max pending connections in kernel queue
+    int max_body_size;     // max client body in bytes
+
     std::vector<std::string> server_name; // host names
-    bool default_server;                  // default server applies to a port
-                                          // and if none is flagged default_server,
-                                          // then the first one is the default one
-    std::vector<std::string> methods;     // allowed methods
     std::string root;
+    bool default_server;
+
+    std::vector<std::string> methods; // allowed methods
+
     Location default_location;
     std::vector<Location> locations;
-    int domain;
-    int max_conn;
-    std::string protocol;
 };
+
+ServerConfig make_site1_config();
 
 #endif // CONFIG_SERVER_CONFIG_HPP_
