@@ -15,17 +15,20 @@ Router::Router(const ServerConfig& config)
 {
 }
 
-//(TO DO DHE : function to be patched to correctly handle the request /index.html
+// Function has been updated to not do a char by char comparision
 int Router::prefix_length(const std::string& req_location, const std::string& location)
 {
-    int len_min = std::min(req_location.size(), location.size());
-    int len_match = 0;
-    for (int i = 0; i < len_min; ++i) {
-        if (req_location[i] != location[i])
-            break;
-        ++len_match;
-    }
-    return (len_match);
+    if (req_location.empty())
+        return 0;
+    if (req_location.size() < location.size())
+        return 0;
+    if (req_location.compare(0, location.size(), location) != 0)
+        return 0;
+    if (req_location.size() == location.size())
+        return location.size();
+    if (req_location[location.size()] == '/')
+        return location.size();
+    return 0;
 }
 
 // for the moment it takes some static input
