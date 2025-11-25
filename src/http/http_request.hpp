@@ -7,7 +7,14 @@
 struct HttpRequest {
     std::string method;
     std::string path;
+    std::string http_version;
+
+    size_t content_length;
+    bool is_chunked;
+    bool keep_alive;
+
     std::map<std::string, std::string> headers;
+
     std::string body;
 };
 

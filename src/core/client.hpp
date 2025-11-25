@@ -2,6 +2,7 @@
 #define CORE_CLIENT_HPP_
 
 #include "handler/handler.hpp"
+#include "http/http_parser.hpp"
 #include "http/http_request.hpp"
 #include "http/http_response.hpp"
 
@@ -26,9 +27,10 @@ public:
     const sockaddr_in& addr() const { return addr_; }
     const HttpRequest& req() const { return req_; }
     HttpResponse& res() { return res_; }
-    std::string& recv_buffer() { return recv_buffer_; }
+
     std::string& send_buffer() { return send_buffer_; }
     Handler* handler() const { return handler_; }
+    HttpParser& parser() { return parser_; }
 
 private:
     Client();
@@ -41,8 +43,8 @@ private:
     sockaddr_in addr_;
     HttpRequest req_;
     HttpResponse res_; // TODO: remove
-    std::string recv_buffer_;
     std::string send_buffer_;
+    HttpParser parser_;
     Handler* handler_;
 };
 

@@ -12,7 +12,6 @@ Client::Client(uint64_t id, int fd, const sockaddr_in& addr)
       fd_(fd),
       addr_(addr),
       handler_(NULL)
-
 {
     set_nonblocking();
     std::cout << "Client constructor called" << std::endl;
@@ -24,7 +23,7 @@ Client::~Client()
         close(fd_);
     }
     if (handler_) {
-        delete (handler_);
+        delete handler_;
     }
     std::cout << "Client destructor called" << std::endl;
 }

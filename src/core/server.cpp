@@ -1,7 +1,8 @@
 #include "core/server.hpp"
 
+#include "core/client.hpp"
 #include "core/signals.hpp"
-#include "http/http_request.hpp"
+#include "http/http_parser.hpp"
 #include "router/router.hpp"
 #include "util/syscall_error.hpp"
 
@@ -15,6 +16,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <cassert>
 #include <cstring>
 #include <iostream>
 
@@ -75,15 +77,20 @@ uint64_t Server::add_connection(int client_fd, const sockaddr_in& addr)
     return client_id;
 }
 
-void Server::remove_connection(uint64_t id)
+void Server::close_connection(Client& conn)
 {
-    std::map<uint64_t, Client*>::iterator it = clients_.find(id);
+    uint64_t client_id = conn.id();
+
+    epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, conn.fd(), NULL);
+
+    std::map<uint64_t, Client*>::iterator it = clients_.find(client_id);
     if (it == clients_.end()) {
         std::cerr << "[WARNING] Attempted to remove inexistant client id" << std::endl;
         return;
     }
+
     delete it->second;
-    clients_.erase(id);
+    clients_.erase(client_id);
 }
 
 Client& Server::get_client(uint64_t id)
@@ -174,57 +181,68 @@ static void print_raw_data(const std::string& s)
 void Server::handle_events(Client& conn, uint32_t events)
 {
     char tmp[4096];
-
-    // No handler yet, assume it's a new request (hardcoded for now)
-    if (!conn.handler()) {
-        HttpRequest req;
-        req.method = "GET";
-        req.path = "/files/42.txt";
-        conn.set_request(req);
-
-        Handler* h = router_.handle_request(conn.req());
-        conn.set_handler(h);
-    }
+    uint32_t next_events = 0;
 
     // Can read from socket
     if (events & EPOLLIN) {
-        int n = recv(conn.fd(), tmp, sizeof(tmp), 0);
-        if (n == 0) {
-            epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, conn.fd(), NULL);
-            remove_connection(conn.id());
+
+        size_t bytes_received = recv(conn.fd(), tmp, sizeof(tmp), 0);
+
+        if (bytes_received == 0) {
+            close_connection(conn);
             return;
         }
-        if (n > 0) {
-            conn.recv_buffer().append(tmp, n);
 
-            std::cout << "* Received from socket\n";
-            print_raw_data(conn.recv_buffer());
+        std::cout << "* Received data from socket" << std::endl;
+        print_raw_data(tmp);
 
-            epoll_event ev;
-            ev.events = EPOLLOUT;
-            ev.data.u64 = conn.id();
-            epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, conn.fd(), &ev);
+        // Feed data to the parser
+        HttpParser& parser = conn.parser();
+        parser.feed_data(tmp, bytes_received);
+
+        if (parser.status() == HttpParser::kError) {
+            close_connection(conn);
+            return;
+        }
+
+        if (!conn.handler() && parser.status() >= HttpParser::kHeadersDone) {
+            Handler* h = router_.handle_request(parser.request());
+            conn.set_handler(h);
+        }
+        if (conn.handler()) {
+            if (conn.handler()->needs_input()) {
+                size_t n = parser.slurp_data(tmp, sizeof(tmp));
+                (void) conn.handler()->write_data(tmp, n);
+            }
         }
     }
 
     // Can write to socket
     if (events & EPOLLOUT) {
-        if (conn.handler()->has_output()) {
-            int n = conn.handler()->read_data(tmp, sizeof(tmp));
-            if (n > 0)
-                conn.send_buffer().append(tmp, n);
-        }
+        if (conn.handler()) {
 
-        if (!conn.send_buffer().empty()) {
-            int n = send(conn.fd(), conn.send_buffer().data(), conn.send_buffer().size(), 0);
-            if (n > 0)
-                conn.send_buffer().erase(0, n);
-        }
+            Handler& handler = *conn.handler();
+            std::string& send_buffer = conn.send_buffer();
 
-        if (conn.handler()->is_done() && conn.send_buffer().empty()) {
-            epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, conn.fd(), NULL);
-            remove_connection(conn.id());
-            return;
+            if (handler.has_output()) {
+                size_t n = handler.read_data(tmp, sizeof(tmp));
+                send_buffer.append(tmp, n);
+            }
+            if (!send_buffer.empty()) {
+                size_t bytes_sent = send(conn.fd(), send_buffer.data(), send_buffer.size(), 0);
+                send_buffer.erase(0, bytes_sent);
+            }
         }
     }
+
+    // Update next event subscription
+    if (!conn.handler() || conn.handler()->needs_input())
+        next_events |= EPOLLIN;
+    if (conn.handler() && (conn.handler()->has_output() || !conn.send_buffer().empty()))
+        next_events |= EPOLLOUT;
+
+    epoll_event ev;
+    ev.data.u64 = conn.id();
+    ev.events = next_events;
+    epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, conn.fd(), &ev);
 }

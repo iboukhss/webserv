@@ -29,7 +29,7 @@ private:
     void handle_events(Client& conn, uint32_t events);
 
     uint64_t add_connection(int client_fd, const sockaddr_in& addr);
-    void remove_connection(uint64_t id);
+    void close_connection(Client& conn);
 
     Client& get_client(uint64_t id);
 
