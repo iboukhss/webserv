@@ -18,6 +18,7 @@ public:
     virtual bool has_output() const { return !headers_sent() || (has_body() && !body_sent()); }
     virtual bool needs_input() const { return false; };
     virtual bool is_done() const { return !has_output(); }
+    const std::string& path() const { return file_path_; }
 
 private:
     StaticFileHandler(const StaticFileHandler&);
