@@ -15,6 +15,7 @@ Router::Router(const ServerConfig& config)
 {
 }
 
+//(TO DO DHE : function to be patched to correctly handle the request /index.html
 int Router::prefix_length(const std::string& req_location, const std::string& location)
 {
     int len_min = std::min(req_location.size(), location.size());
