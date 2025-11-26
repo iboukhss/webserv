@@ -64,25 +64,29 @@ std::string Router::build_request_path(const HttpRequest& request, const Locatio
     std::string full_path = config_.root;
     std::cout << "config_.root = " << config_.root << std::endl;
     std::string folder = static_cast<std::string>(best_match->path);
-<<<<<<< HEAD
-=======
-    std::cout << "folder = " << folder << std::endl;
-    // std::cout << "root = " << full_path << std::endl;
->>>>>>> d20f987 (committing progress before rebase on dev)
     std::string file =
         request.path.substr(best_match->path.size(), request.path.size() - best_match->path.size());
-
     std::cout << "file = " << file << std::endl;
     if (full_path[full_path.size() - 1] != '/')
-        full_path = full_path + "/";
+        full_path = full_path + "/"; //     root/
     if (folder[0] == '/')
         folder.erase(0, 1);
     if (folder[folder.size() - 1] != '/')
         folder = folder + "/";
     if (file[0] == '/')
         file.erase(0, 1);
-    full_path = full_path + folder + file;
+    LOG(DEBUG) << "root = " << full_path;
+    LOG(DEBUG) << "folder = " << folder;
+    LOG(DEBUG) << "file = " << file;
 
+    if (!folder.empty() && folder != "/") {
+        LOG(DEBUG) << "full_path = full_path + folder + file";
+        full_path = full_path + folder + file;
+    }
+    else {
+        LOG(DEBUG) << "full_path = full_path + file";
+        full_path = full_path + file;
+    }
     if (full_path[full_path.size() - 1] == '/')
         full_path = full_path + "index.html";
     return (full_path);
