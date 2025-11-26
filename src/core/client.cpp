@@ -1,5 +1,6 @@
 #include "core/client.hpp"
 
+#include "util/log_message.hpp"
 #include "util/syscall_error.hpp"
 
 #include <fcntl.h>
@@ -14,7 +15,7 @@ Client::Client(uint64_t id, int fd, const sockaddr_in& addr)
       handler_(NULL)
 {
     set_nonblocking();
-    std::cout << "Client constructor called" << std::endl;
+    LOG(DEBUG) << "Client constructor called";
 }
 
 Client::~Client()
@@ -25,7 +26,7 @@ Client::~Client()
     if (handler_) {
         delete handler_;
     }
-    std::cout << "Client destructor called" << std::endl;
+    LOG(DEBUG) << "Client destructor called";
 }
 
 void Client::set_nonblocking()

@@ -32,6 +32,8 @@ SRCS      = $(addprefix $(SRC_DIR)/, \
             http/http_response.hpp \
             router/router.cpp \
             router/router.hpp \
+            util/log_message.cpp \
+            util/log_message.hpp \
             util/str_split.cpp \
             util/str_trim.cpp \
             util/string.hpp \

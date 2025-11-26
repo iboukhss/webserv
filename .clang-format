@@ -9,10 +9,24 @@ SpaceAfterCStyleCast: true
 IndentAccessModifiers: false
 AccessModifierOffset: -4
 
-#AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: InlineOnly
 BreakConstructorInitializers: BeforeColon
 PackConstructorInitializers: Never
+
+AllowShortCaseLabelsOnASingleLine: true
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
+  
+# Fails on ubuntu-latest
+#AlignEscapedNewlines: LeftWithLastLine
+
+AlignEscapedNewlines: DontAlign
+AlignConsecutiveMacros:
+  Enabled: true
+
+# Fails on ubuntu-latest
+#BreakTemplateDeclarations: Yes
+AlwaysBreakTemplateDeclarations: true
 
 SortIncludes: true
 IncludeBlocks: Regroup

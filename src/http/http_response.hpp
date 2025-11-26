@@ -17,14 +17,14 @@ public:
     };
 
     std::string http_version;
-    Status code;
+    HttpResponse::Status code;
     std::map<std::string, std::string> headers;
     std::string body;
 
     std::string to_string() const;
 
 private:
-    const char* reason_phrase(Status code) const;
+    const char* reason_phrase(HttpResponse::Status code) const;
 };
 
 #endif // HTTP_HTTP_RESPONSE_HPP_
