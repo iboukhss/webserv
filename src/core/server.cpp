@@ -4,6 +4,7 @@
 #include "core/signals.hpp"
 #include "http/http_parser.hpp"
 #include "router/router.hpp"
+#include "util/log_message.hpp"
 #include "util/syscall_error.hpp"
 
 #include <errno.h>
@@ -85,7 +86,7 @@ void Server::close_connection(Client& conn)
 
     std::map<uint64_t, Client*>::iterator it = clients_.find(client_id);
     if (it == clients_.end()) {
-        std::cerr << "[WARNING] Attempted to remove inexistant client id" << std::endl;
+        LOG(WARN) << "Attempted to remove inexistand client id";
         return;
     }
 
@@ -97,7 +98,7 @@ Client& Server::get_client(uint64_t id)
 {
     std::map<uint64_t, Client*>::iterator it = clients_.find(id);
     if (it == clients_.end()) {
-        throw std::runtime_error("[FATAL] Attempted to retrieve inexistant client id");
+        throw std::runtime_error("Attempted to retrieve inexistant client id");
     }
     return *(it->second);
 }
@@ -121,7 +122,7 @@ void Server::accept_connection()
     ev.data.u64 = client_id;
     epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, client_fd, &ev);
 
-    std::cout << "* Connection established, client_id = " << client_id << std::endl;
+    LOG(INFO) << "Client #" << client_id << " connected";
 }
 
 void Server::run()
@@ -135,8 +136,7 @@ void Server::run()
                 // nothing happened.
                 n_events = 0;
                 break;
-            default:
-                throw UnrecoverableError("epoll_wait", errno);
+            default: throw UnrecoverableError("epoll_wait", errno);
             }
         }
 
@@ -193,7 +193,7 @@ void Server::handle_events(Client& conn, uint32_t events)
             return;
         }
 
-        std::cout << "* Received data from socket" << std::endl;
+        LOG(DEBUG) << "Received " << bytes_received << " bytes from socket";
         print_raw_data(tmp);
 
         // Feed data to the parser

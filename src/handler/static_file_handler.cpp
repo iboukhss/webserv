@@ -1,6 +1,7 @@
 #include "handler/static_file_handler.hpp"
 
 #include "http/http_response.hpp"
+#include "util/log_message.hpp"
 #include "util/syscall_error.hpp"
 
 #include <errno.h>
@@ -22,7 +23,7 @@ StaticFileHandler::StaticFileHandler(const std::string& path)
     HttpResponse res;
     res.http_version = "HTTP/1.1";
 
-    std::cout << "[DEBUG] Trying to open file: " << path << std::endl;
+    LOG(DEBUG) << "Trying to open file: " << path;
 
     if (stat(path.c_str(), &file_stat) != 0 || !S_ISREG(file_stat.st_mode)) {
         res.code = HttpResponse::kNotFound;

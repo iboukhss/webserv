@@ -3,6 +3,7 @@
 #include "config/server_config.hpp"
 #include "handler/static_file_handler.hpp"
 #include "http/http_request.hpp"
+#include "util/log_message.hpp"
 
 #include <sys/stat.h>
 
@@ -58,7 +59,6 @@ std::string Router::build_request_path(const HttpRequest& request, const Locatio
 {
     std::string full_path = config_.root;
     std::string folder = static_cast<std::string>(best_match->path);
-    // std::cout << "root = " << full_path << std::endl;
     std::string file =
         request.path.substr(best_match->path.size(), request.path.size() - best_match->path.size());
     if (full_path[full_path.size() - 1] != '/')
