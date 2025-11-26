@@ -62,9 +62,17 @@ bool Router::is_valid_method(const std::string& method)
 std::string Router::build_request_path(const HttpRequest& request, const Location* best_match)
 {
     std::string full_path = config_.root;
+    std::cout << "config_.root = " << config_.root << std::endl;
     std::string folder = static_cast<std::string>(best_match->path);
+<<<<<<< HEAD
+=======
+    std::cout << "folder = " << folder << std::endl;
+    // std::cout << "root = " << full_path << std::endl;
+>>>>>>> d20f987 (committing progress before rebase on dev)
     std::string file =
         request.path.substr(best_match->path.size(), request.path.size() - best_match->path.size());
+
+    std::cout << "file = " << file << std::endl;
     if (full_path[full_path.size() - 1] != '/')
         full_path = full_path + "/";
     if (folder[0] == '/')
