@@ -71,6 +71,15 @@ run: all
 val: all
 	valgrind ./$(TARGET)
 
+PHONY += test test-all check
+test:
+	@echo "Running test scripts..."
+	./run_tests.sh
+
+test-all: unit-tests test
+
+check: format lint test-all
+
 $(TARGET): $(OBJS)
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(OBJS) -o $@
@@ -117,8 +126,9 @@ TEST_DEPS    = $(TEST_OBJS:.o=.d)
 DEPS         += $(TEST_DEPS)
 
 # Test runner target
-PHONY += test
-test: $(TEST_TARGET)
+PHONY += unit-tests
+unit-tests: $(TEST_TARGET)
+	@echo "Running unit tests..."
 	./$(TEST_TARGET)
 
 $(TEST_TARGET): $(TEST_OBJS) $(filter-out $(OBJ_DIR)/main.o,$(OBJS))
@@ -150,8 +160,6 @@ format:
 
 lint: db
 	clang-tidy -p=. --header-filter=.* --warnings-as-errors=* $(CPPS)
-
-check: format lint test
 
 # Careful, these targets will overwrite files.
 # Make sure to use `make check` before committing irreversible changes.
