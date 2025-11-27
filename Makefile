@@ -52,7 +52,7 @@ DEPS      = $(OBJS:.o=.d)
 
 # Compiler settings
 CXX       = clang++
-CXXFLAGS  = -Wall -Wextra -Werror -std=c++98 -g3
+CXXFLAGS  = -Wall -Wextra -Werror -std=c++98 -g3 -fsanitize=address,undefined
 CPPFLAGS  = -I$(SRC_DIR) -MMD -MP
 
 # For utest.h
