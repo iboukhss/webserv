@@ -26,7 +26,7 @@ int Router::prefix_length(const std::string& req_location, const std::string& lo
         return 0;
     if (req_location.size() == location.size())
         return location.size();
-    if (req_location[location.size()] == '/')
+    if (req_location.size() > location.size() && req_location[location.size()] == '/')
         return location.size();
     return 0;
 }
@@ -40,6 +40,7 @@ const Location* Router::routing(const std::string& req_location)
     for (size_t i = 0; i < config_.locations.size(); i++) {
         int len_match = prefix_length(req_location, config_.locations[i].path);
         if (len_match > longest_match) {
+            longest_match = len_match;
             best_match = &config_.locations[i];
         }
     }
@@ -61,34 +62,41 @@ bool Router::is_valid_method(const std::string& method)
 // TO DO (DHE) : In the config parser -> ensure that root has no trailing /
 std::string Router::build_request_path(const HttpRequest& request, const Location* best_match)
 {
-    std::string full_path = config_.root;
-    std::cout << "config_.root = " << config_.root << std::endl;
-    std::string folder = static_cast<std::string>(best_match->path);
-    std::string file =
-        request.path.substr(best_match->path.size(), request.path.size() - best_match->path.size());
-    std::cout << "file = " << file << std::endl;
-    if (full_path[full_path.size() - 1] != '/')
-        full_path = full_path + "/"; //     root/
-    if (folder[0] == '/')
-        folder.erase(0, 1);
-    if (folder[folder.size() - 1] != '/')
-        folder = folder + "/";
-    if (file[0] == '/')
-        file.erase(0, 1);
-    LOG(DEBUG) << "root = " << full_path;
-    LOG(DEBUG) << "folder = " << folder;
-    LOG(DEBUG) << "file = " << file;
+    std::string root = config_.root;
+    // add trailing / to root if required
+    if (root[root.size() - 1] != '/')
+        root += '/';
 
-    if (!folder.empty() && folder != "/") {
-        LOG(DEBUG) << "full_path = full_path + folder + file";
-        full_path = full_path + folder + file;
+    std::string folder = static_cast<std::string>(best_match->path);
+    // remove leading / from folder if required
+    if (folder == "/")
+        folder.clear();
+
+    if (!folder.empty() && folder[0] == '/')
+        folder.erase(0, 1);
+
+    if (!folder.empty() && folder[folder.size() - 1] != '/')
+        folder += '/';
+
+    std::string file;
+    if (best_match->path == "/" || best_match->path.empty()) {
+        file = request.path;
     }
     else {
-        LOG(DEBUG) << "full_path = full_path + file";
-        full_path = full_path + file;
+        size_t prefix = best_match->path.size();
+        file = request.path.substr(prefix);
     }
-    if (full_path[full_path.size() - 1] == '/')
-        full_path = full_path + "index.html";
+    if (!file.empty() && file[0] == '/')
+        file.erase(0, 1);
+    // LOG(DEBUG) << "root = " << root;
+    // LOG(DEBUG) << "folder = " << folder;
+    // LOG(DEBUG) << "file = " << file;
+    std::string full_path = root;
+    if (!folder.empty())
+        full_path += folder;
+    full_path += file;
+    if (!full_path.empty() && full_path[full_path.size() - 1] == '/')
+        full_path += "index.html";
     return (full_path);
 }
 
