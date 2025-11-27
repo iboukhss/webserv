@@ -18,6 +18,8 @@ Router::Router(const ServerConfig& config)
 // Function has been updated to not do a char by char comparision
 int Router::prefix_length(const std::string& req_location, const std::string& location)
 {
+    if (location == "/")
+        return 1;
     if (req_location.empty())
         return 0;
     if (req_location.size() < location.size())
@@ -37,7 +39,7 @@ const Location* Router::routing(const std::string& req_location)
     int longest_match = 0;
     const Location* best_match = NULL;
     // iterrate through locations to find longest match
-    for (size_t i = 0; i < config_.locations.size(); i++) {
+    for (size_t i = 0; i < config_.locations.size(); ++i) {
         int len_match = prefix_length(req_location, config_.locations[i].path);
         if (len_match > longest_match) {
             longest_match = len_match;
@@ -88,15 +90,13 @@ std::string Router::build_request_path(const HttpRequest& request, const Locatio
     }
     if (!file.empty() && file[0] == '/')
         file.erase(0, 1);
-    // LOG(DEBUG) << "root = " << root;
-    // LOG(DEBUG) << "folder = " << folder;
-    // LOG(DEBUG) << "file = " << file;
     std::string full_path = root;
     if (!folder.empty())
         full_path += folder;
     full_path += file;
     if (!full_path.empty() && full_path[full_path.size() - 1] == '/')
         full_path += "index.html";
+    LOG(DEBUG) << "full_path = " << full_path;
     return (full_path);
 }
 
