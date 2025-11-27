@@ -156,18 +156,19 @@ void Server::run()
 }
 
 // Dirty hack
-static void print_raw_data(const std::string& s)
+
+static void print_raw_data(const char* s, size_t n)
 {
     std::cout << "< ";
 
-    for (size_t i = 0; i < s.size(); ++i) {
+    for (size_t i = 0; i < n; ++i) {
         char c = s[i];
         if (c == '\r') {
             std::cout << "\\r";
         }
         else if (c == '\n') {
             std::cout << "\\n\n";
-            if (i < s.size() - 1) {
+            if (i < n - 1) {
                 std::cout << "< ";
             }
         }
@@ -194,7 +195,7 @@ void Server::handle_events(Client& conn, uint32_t events)
         }
 
         LOG(DEBUG) << "Received " << bytes_received << " bytes from socket";
-        print_raw_data(tmp);
+        print_raw_data(tmp, bytes_received);
 
         // Feed data to the parser
         HttpParser& parser = conn.parser();
