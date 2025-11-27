@@ -95,4 +95,5 @@ UTEST(RouterTest, BuildRequestPath)
     ASSERT_TRUE(sfh != NULL);
     std::cout << "Handler returned path = [" << sfh->path() << "]" << std::endl;
     ASSERT_STREQ(sfh->path().c_str(), "www/site1/index.html");
+    delete handler_;
 }
