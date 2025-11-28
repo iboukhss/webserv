@@ -215,6 +215,8 @@ void Server::handle_events(Client& conn, uint32_t events)
                 size_t n = parser.slurp_data(tmp, sizeof(tmp));
                 (void) conn.handler()->write_data(tmp, n);
             }
+            else {
+                        }
         }
     }
 

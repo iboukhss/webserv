@@ -1,8 +1,10 @@
 #include "router/router.hpp"
 
 #include "config/server_config.hpp"
+#include "handler/error_handler.hpp"
 #include "handler/static_file_handler.hpp"
 #include "http/http_request.hpp"
+#include "http/http_response.hpp"
 #include "util/log_message.hpp"
 
 #include <sys/stat.h>
@@ -49,8 +51,6 @@ const Location* Router::routing(const std::string& req_location)
     return (best_match ? best_match : &(config_.default_location));
 }
 
-// NOTE(IBO): I changed the return type to bool because I got confused during testing.
-// Sidenote, I don't think allowed methods should be stored in the ServerConfig.
 bool Router::is_valid_method(const std::string& method)
 {
     for (size_t i = 0; i < config_.methods.size(); ++i) {
@@ -60,8 +60,6 @@ bool Router::is_valid_method(const std::string& method)
     return (false);
 }
 
-// Description : build full path by concat 3 elements and consider for leading/trailing backslashes
-// TO DO (DHE) : In the config parser -> ensure that root has no trailing /
 std::string Router::build_request_path(const HttpRequest& request, const Location* best_match)
 {
     std::string root = config_.root;
@@ -103,24 +101,18 @@ std::string Router::build_request_path(const HttpRequest& request, const Locatio
 Handler* Router::handle_request(const HttpRequest& request)
 {
     if (!is_valid_method(request.method)) {
-        // kNotAllowed? create a new ErrorHandler maybe?
-        std::cerr << "Invalid method not implemented" << std::endl;
-        return NULL;
+        return new ErrorHandler(HttpResponse::kMethodNotAllowed); // 405
     }
     if (request.path.empty()) {
-        // kBadRequest? same thing
-        std::cerr << "Bad request not implemented" << std::endl;
-        return NULL;
+        return new ErrorHandler(HttpResponse::kBadRequest); // 400
     }
-
     const Location* longest_match = routing(request.path);
     if (!longest_match) {
-        // kNotFound? no match?
-        std::cerr << "No match found not implemented" << std::endl;
-        return NULL;
+        return new ErrorHandler(HttpResponse::kNotFound); // 404
     }
     std::string full_path = build_request_path(request, longest_match);
     if (request.method == "GET") {
+        LOG(DEBUG) << "StaticFileHandler constructed";
         return new StaticFileHandler(full_path);
     }
 
@@ -128,5 +120,5 @@ Handler* Router::handle_request(const HttpRequest& request)
 
     // Fallback, should never happen in theory
     std::cerr << "Something terrible happened in the router" << std::endl;
-    return NULL;
+    return new ErrorHandler(HttpResponse::kInternalServerError); // 500
 }
