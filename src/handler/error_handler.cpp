@@ -8,6 +8,7 @@
 int ErrorHandler::read_data(char* buf, int n)
 {
     std::string res = res_.to_string();
+    LOG(DEBUG) << res;
     std::memcpy(buf, &res, n);
     return (res.size());
 }
@@ -23,6 +24,7 @@ int ErrorHandler::write_data(const char* buf, int n)
 ErrorHandler::ErrorHandler(HttpResponse::Status code)
     : res_sent_(false)
 {
+    res_.http_version = "HTTP/1.1";
     res_.code = code;
     LOG(DEBUG) << "ErrorHandler constructed with code " << code;
 }
