@@ -10,6 +10,13 @@ public:
     explicit ErrorHandler(int error_code);
     virtual ~ErrorHandler();
 
+    virtual bool is_readable() const { return !is_done(); } // read until done
+    virtual bool is_writable() const { return false; };     // handler is read-only
+    virtual bool is_done() const
+    {
+        return (true);
+    };
+
     int getErrorCode();
 
 private:

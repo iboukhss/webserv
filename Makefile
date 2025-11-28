@@ -28,6 +28,11 @@ SRCS      = $(addprefix $(SRC_DIR)/, \
             http/http_parser.cpp \
             http/http_parser.hpp \
             http/http_request.hpp \
+			handler/get_handler.cpp \
+			handler/get_handler.hpp \
+			handler/error_handler.cpp \
+			handler/error_handler.hpp \
+			http/http_request.hpp \
             http/http_response.cpp \
             http/http_response.hpp \
             router/router.cpp \
