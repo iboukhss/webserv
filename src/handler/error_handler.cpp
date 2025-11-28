@@ -26,6 +26,7 @@ ErrorHandler::ErrorHandler(HttpResponse::Status code)
 {
     res_.http_version = "HTTP/1.1";
     res_.code = code;
+    res_.body = "<h1> some error code to be shown here <h1>";
     LOG(DEBUG) << "ErrorHandler constructed with code " << code;
 }
 
