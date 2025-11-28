@@ -64,17 +64,18 @@ UTEST(RouterTest, IncorrectMethod)
 
     HttpRequest req;
     req.method = "INCORRECT METHOD";
-    req.path = "/files/42.txt";
+    req.path = "/examples/index.html";
 
     Router router(config);
 
-    Handler* h = router.handle_request(req);
+    Handler* h = router.handle_request(req); // ErrorHandler should be returned
     ASSERT_TRUE(h != NULL);
     delete h;
 }
 
-UTEST(RouterTest, EmptyPath)
+UTEST(RouterTest, EmptyPathReturnsHandler)
 {
+    UTEST_SKIP("To do: Map empty request path to root");
     ServerConfig config = make_site1_config();
 
     HttpRequest req;
@@ -88,9 +89,43 @@ UTEST(RouterTest, EmptyPath)
     delete h;
 }
 
+UTEST(RouterTest, EmptyPathReturnsDefaultFile)
+{
+    UTEST_SKIP("To do: Map empty request path to root");
+    ServerConfig config = make_site1_config();
+
+    HttpRequest req;
+    req.method = "GET";
+    req.path = "";
+
+    Router router(config);
+
+    Handler* h = router.handle_request(req);
+    StaticFileHandler* sfh = dynamic_cast<StaticFileHandler*>(h);
+    ASSERT_TRUE(sfh != NULL);
+    ASSERT_STREQ(sfh->path().c_str(), "www/site1/index.html");
+    delete h;
+}
+
+UTEST(RouterTest, Root)
+{
+    ServerConfig config = make_site1_config();
+
+    HttpRequest req;
+    req.method = "GET";
+    req.path = "/";
+
+    Router router(config);
+
+    Handler* h = router.handle_request(req);
+    StaticFileHandler* sfh = dynamic_cast<StaticFileHandler*>(h);
+    ASSERT_TRUE(sfh != NULL);
+    ASSERT_STREQ(sfh->path().c_str(), "www/site1/index.html");
+    delete h;
+}
+
 UTEST(RouterTest, BuildRequestPath)
 {
-    UTEST_SKIP("Router::build_request_path to be fixed for double slashes");
     ServerConfig config = make_site1_config();
 
     HttpRequest req;
@@ -104,5 +139,27 @@ UTEST(RouterTest, BuildRequestPath)
     StaticFileHandler* sfh = dynamic_cast<StaticFileHandler*>(handler_);
     ASSERT_TRUE(sfh != NULL);
     ASSERT_STREQ(sfh->path().c_str(), "www/site1/index.html");
+    delete handler_;
+}
+
+UTEST(RouterTest, BuildRequestPath_Long)
+{
+    UTEST_SKIP("Implement test on multiple layer folder structure");
+    ServerConfig config = make_example_config();
+
+    HttpRequest req;
+    req.method = "GET";
+    req.path = "/example/test_subfolder/test_subfolder/someFile.txt";
+
+    Router router(config);
+
+    Handler* handler_ = router.handle_request(req);
+    ASSERT_TRUE(handler_ != NULL);
+
+    StaticFileHandler* sfh = dynamic_cast<StaticFileHandler*>(handler_);
+    ASSERT_TRUE(sfh != NULL); // REQUIRED
+
+    ASSERT_STREQ(sfh->path().c_str(), "www/example/test_subfolder/test_subfolder/someFile.txt");
+
     delete handler_;
 }
