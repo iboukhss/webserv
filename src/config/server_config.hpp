@@ -29,5 +29,6 @@ struct ServerConfig {
 };
 
 ServerConfig make_site1_config();
+ServerConfig make_example_config();
 
 #endif // CONFIG_SERVER_CONFIG_HPP_
