@@ -216,7 +216,8 @@ void Server::handle_events(Client& conn, uint32_t events)
                 (void) conn.handler()->write_data(tmp, n);
             }
             else {
-                        }
+                LOG(DEBUG) << "conn.handler()->needs_input() == false";
+            }
         }
     }
 
