@@ -7,7 +7,7 @@
 // the order of headers will likely change. If any of these tests fail, feel
 // free to skip them until the HTTP response design is more stable.
 
-UTEST(GetHandlerTest, StatusOk)
+UTEST(StaticFileHandlerTest, StatusOk)
 {
     char buf[4096] = {0};
     StaticFileHandler test("www/example/index.html");
@@ -22,17 +22,17 @@ UTEST(GetHandlerTest, StatusOk)
                       "<!DOCTYPE html><html><head><title>Example</title></head></html>\n");
 }
 
-UTEST(GetHandlerTest, StatusNotFound)
+UTEST(StaticFileHandlerTest, StatusNotFound)
 {
     char buf[4096] = {0};
     StaticFileHandler test("www/example/inexistant.html");
 
     test.read_data(buf, sizeof(buf));
 
-    ASSERT_STREQ(buf, "HTTP/1.1 404 Not Found\r\n\r\n");
+    ASSERT_STREQ(buf, "HTTP/1.1 404 Not Found\r\n\r\n<h1>404 Not Found</h1>");
 }
 
-UTEST(GetHandlerTest, ReadSomeData)
+UTEST(StaticFileHandlerTest, ReadSomeData)
 {
     char buf[4096] = {0};
     StaticFileHandler test("");
@@ -42,7 +42,7 @@ UTEST(GetHandlerTest, ReadSomeData)
     ASSERT_TRUE(test.read_data(buf, sizeof(buf)));
 }
 
-UTEST(GetHandlerTest, WriteNoData)
+UTEST(StaticFileHandlerTest, WriteNoData)
 {
     char msg[] = "Hello, world!\n";
     StaticFileHandler test("");
@@ -52,7 +52,7 @@ UTEST(GetHandlerTest, WriteNoData)
     ASSERT_FALSE(test.write_data(msg, sizeof(msg)));
 }
 
-UTEST(GetHandlerTest, SmallBuffer)
+UTEST(StaticFileHandlerTest, SmallBuffer)
 {
     char buf[1] = {0};
     StaticFileHandler test("www/example/index.html");
