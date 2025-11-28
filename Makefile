@@ -24,12 +24,16 @@ SRCS      = $(addprefix $(SRC_DIR)/, \
             handler/static_file_handler.cpp \
             handler/static_file_handler.hpp \
             handler/handler.cpp \
+<<<<<<< HEAD
             handler/handler.hpp \
             http/http_parser.cpp \
             http/http_parser.hpp \
             http/http_request.hpp \
 			handler/get_handler.cpp \
 			handler/get_handler.hpp \
+=======
+			handler/handler.hpp \
+>>>>>>> c50efa5 (updating Makefile)
 			handler/error_handler.cpp \
 			handler/error_handler.hpp \
 			http/http_request.hpp \
