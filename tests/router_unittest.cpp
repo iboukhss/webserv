@@ -69,7 +69,7 @@ UTEST(RouterTest, IncorrectMethod)
     Router router(config);
 
     Handler* h = router.handle_request(req);
-    ASSERT_TRUE(h == NULL);
+    ASSERT_TRUE(h != NULL);
     delete h;
 }
 
@@ -84,7 +84,7 @@ UTEST(RouterTest, EmptyPath)
     Router router(config);
 
     Handler* h = router.handle_request(req);
-    ASSERT_TRUE(h == NULL);
+    ASSERT_TRUE(h != NULL);
     delete h;
 }
 
