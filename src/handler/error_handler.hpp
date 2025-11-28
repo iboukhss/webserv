@@ -18,6 +18,8 @@ public:
     virtual bool needs_input() const { return (false); };
     virtual bool is_done() const { return (res_sent_); };
 
+    int error_code() { return res_.code; };
+
 private:
     ErrorHandler(const ErrorHandler&);
     ErrorHandler& operator=(const ErrorHandler&);
