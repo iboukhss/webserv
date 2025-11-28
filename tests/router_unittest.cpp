@@ -19,7 +19,9 @@ UTEST(RouterTest, GET)
 
     Router router(config);
 
-    ASSERT_TRUE(router.handle_request(req));
+    Handler* h = router.handle_request(req);
+    ASSERT_TRUE(h != NULL);
+    delete h;
 }
 
 UTEST(RouterTest, POST)
@@ -34,7 +36,9 @@ UTEST(RouterTest, POST)
 
     Router router(config);
 
-    ASSERT_TRUE(router.handle_request(req));
+    Handler* h = router.handle_request(req);
+    ASSERT_TRUE(h != NULL);
+    delete h;
 }
 
 UTEST(RouterTest, DELETE)
@@ -49,7 +53,9 @@ UTEST(RouterTest, DELETE)
 
     Router router(config);
 
-    ASSERT_TRUE(router.handle_request(req));
+    Handler* h = router.handle_request(req);
+    ASSERT_TRUE(h != NULL);
+    delete h;
 }
 
 UTEST(RouterTest, IncorrectMethod)
@@ -62,7 +68,9 @@ UTEST(RouterTest, IncorrectMethod)
 
     Router router(config);
 
-    ASSERT_FALSE(router.handle_request(req));
+    Handler* h = router.handle_request(req);
+    ASSERT_TRUE(h == NULL);
+    delete h;
 }
 
 UTEST(RouterTest, EmptyPath)
@@ -75,7 +83,9 @@ UTEST(RouterTest, EmptyPath)
 
     Router router(config);
 
-    ASSERT_FALSE(router.handle_request(req));
+    Handler* h = router.handle_request(req);
+    ASSERT_TRUE(h == NULL);
+    delete h;
 }
 
 UTEST(RouterTest, BuildRequestPath)
@@ -95,5 +105,4 @@ UTEST(RouterTest, BuildRequestPath)
     ASSERT_TRUE(sfh != NULL);
     ASSERT_STREQ(sfh->path().c_str(), "www/site1/index.html");
     delete handler_;
-    delete sfh;
 }
