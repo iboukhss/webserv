@@ -101,18 +101,20 @@ std::string Router::build_request_path(const HttpRequest& request, const Locatio
 Handler* Router::handle_request(const HttpRequest& request)
 {
     if (!is_valid_method(request.method)) {
-        return new ErrorHandler(HttpResponse::kMethodNotAllowed); // 405
+        return new ErrorHandler(HttpResponse::kMethodNotAllowed); // 405->should not occur as
+                                                                  // checked during request parsing
     }
     if (request.path.empty()) {
-        return new ErrorHandler(HttpResponse::kBadRequest); // 400
+        return new ErrorHandler(
+            HttpResponse::kBadRequest); // 400->should not occur as checked during request parsing
     }
     const Location* longest_match = routing(request.path);
     if (!longest_match) {
-        return new ErrorHandler(HttpResponse::kNotFound); // 404
+        return new ErrorHandler(HttpResponse::kNotFound); // 404->should not occur as routing always
+                                                          // returns fallback root path
     }
     std::string full_path = build_request_path(request, longest_match);
     if (request.method == "GET") {
-        LOG(DEBUG) << "StaticFileHandler constructed";
         return new StaticFileHandler(full_path);
     }
 
