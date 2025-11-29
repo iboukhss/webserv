@@ -27,16 +27,13 @@ StaticFileHandler::StaticFileHandler(const std::string& path)
 
     if (stat(path.c_str(), &file_stat) != 0 || !S_ISREG(file_stat.st_mode)) {
         res.code = HttpResponse::kNotFound;
-        res.body = "<h1>404 Not Found</h1>"; // to display a message during testing
         headers_ = res.to_string();
-        fd_ = -1;
         return;
     }
 
     fd_ = open(path.c_str(), O_RDONLY);
     if (fd_ == -1) {
         res.code = HttpResponse::kInternalServerError;
-        res.body = "<h1>500 Internal Server Error</h1>"; // to display a message during testing
         headers_ = res.to_string();
         return;
     }
@@ -61,16 +58,6 @@ StaticFileHandler::~StaticFileHandler()
         close(fd_);
 }
 
-bool StaticFileHandler::has_output() const
-{
-    if (fd_ == -1) {
-        return (!headers_sent());
-    }
-    else {
-        return (!headers_sent() || !body_sent());
-    }
-}
-
 int StaticFileHandler::read_data(char* buf, int n)
 {
     int bytes_written = 0;
@@ -87,8 +74,6 @@ int StaticFileHandler::read_data(char* buf, int n)
             return bytes_written; // buffer full, cannot continue
         }
     }
-    if (fd_ == -1)
-        return bytes_written;
     if (has_body() && !body_sent()) {
         int body_bytes = read(fd_, buf + bytes_written, n - bytes_written);
         if (body_bytes == -1) {

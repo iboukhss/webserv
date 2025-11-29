@@ -15,7 +15,7 @@ public:
     virtual int read_data(char* buf, int n);
     virtual int write_data(const char* buf, int n);
 
-    virtual bool has_output() const;
+    virtual bool has_output() const { return !headers_sent() || (has_body() && !body_sent()); }
     virtual bool needs_input() const { return false; };
     virtual bool is_done() const { return !has_output(); }
     const std::string& path() const { return file_path_; }
