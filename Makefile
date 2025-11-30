@@ -1,176 +1,137 @@
-################################################################################
-# Project setup
-
-NAME      = webserv
-
-SRC_DIR   = src
-BUILD_DIR = build
-OBJ_DIR   = $(BUILD_DIR)/obj
-BIN_DIR   = $(BUILD_DIR)/bin
-
-TARGET    = $(BIN_DIR)/$(NAME)
-
-# Source tree (keep in alphabetical order)
-SRCS      = $(addprefix $(SRC_DIR)/, \
-            config/server_config.cpp \
-            config/server_config.hpp \
-            core/client.cpp \
-            core/client.hpp \
-            core/server.cpp \
-            core/server.hpp \
-            core/server_defaults.hpp \
-            core/signals.cpp \
-            core/signals.hpp \
-            handler/static_file_handler.cpp \
-            handler/static_file_handler.hpp \
-            handler/error_handler.cpp \
-            handler/error_handler.hpp \
-            handler/handler.cpp \
-            handler/handler.hpp \
-            http/http_parser.cpp \
-            http/http_parser.hpp \
-            http/http_request.cpp \
-            http/http_request.hpp \
-            http/http_response.cpp \
-            http/http_response.hpp \
-            router/router.cpp \
-            router/router.hpp \
-            util/log_message.cpp \
-            util/log_message.hpp \
-            util/str_split.cpp \
-            util/str_trim.cpp \
-            util/string.hpp \
-            util/syscall_error.cpp \
-            util/syscall_error.hpp \
-            main.cpp \
-)
-
-# Separate .cpp and .hpp files
-CPPS      = $(filter %.cpp,$(SRCS))
-HPPS      = $(filter %.hpp,$(SRCS))
-
-# Objects and dependencies
-OBJS      = $(patsubst $(SRC_DIR)/%,$(OBJ_DIR)/%,$(CPPS:.cpp=.o))
-DEPS      = $(OBJS:.o=.d)
+# Use `make CONFIG=release` or `make CONFIG=debug` to switch between build
+# configurations
+CONFIG ?= debug
 
 # Compiler settings
-CXX       = clang++
-CXXFLAGS  = -Wall -Wextra -Werror -std=c++98 -g3 -fsanitize=address,undefined
-CPPFLAGS  = -I$(SRC_DIR) -MMD -MP
+CXX = clang++
+CXXFLAGS = -std=c++98 -Wall -Wextra -Werror
+CPPFLAGS = -Isrc -Ithird_party/utest -MMD -MP
 
-# For utest.h
-CPPFLAGS  += -Ithird_party/utest
+# Build specific options
+ifeq ($(CONFIG),debug)
+  CXXFLAGS += -g3 -fsanitize=address,undefined
+  CPPFLAGS += -DDEBUG
+else ifeq ($(CONFIG),release)
+  CXXFLAGS += -O2
+  CPPFLAGS += -DNDEBUG
+endif
 
-################################################################################
-# Default build
+# Targets
+target = build/$(CONFIG)/bin/webserv
+test_target = build/$(CONFIG)/bin/run_tests
 
-# Default target
-PHONY += all run val
-all: $(TARGET)
+# Main sources (keep in alphabetical order)
+srcs = \
+  src/config/server_config.cpp \
+  src/config/server_config.hpp \
+  src/core/client.cpp \
+  src/core/client.hpp \
+  src/core/server.cpp \
+  src/core/server.hpp \
+  src/core/server_defaults.hpp \
+  src/core/signals.cpp \
+  src/core/signals.hpp \
+  src/handler/error_handler.cpp \
+  src/handler/error_handler.hpp \
+  src/handler/handler.cpp \
+  src/handler/handler.hpp \
+  src/handler/static_file_handler.cpp \
+  src/handler/static_file_handler.hpp \
+  src/http/http_parser.cpp \
+  src/http/http_parser.hpp \
+  src/http/http_request.cpp \
+  src/http/http_request.hpp \
+  src/http/http_response.cpp \
+  src/http/http_response.hpp \
+  src/router/router.cpp \
+  src/router/router.hpp \
+  src/util/log_message.cpp \
+  src/util/log_message.hpp \
+  src/util/str_split.cpp \
+  src/util/str_trim.cpp \
+  src/util/string.hpp \
+  src/util/syscall_error.cpp \
+  src/util/syscall_error.hpp \
+  src/main.cpp \
+
+cpps = $(filter %.cpp,$(srcs))
+hpps = $(filter %.hpp,$(srcs))
+
+objs = $(patsubst src/%.cpp,build/$(CONFIG)/obj/%.o,$(cpps))
+deps = $(objs:.o=.d)
+
+# Test sources (keep in alphabetical order)
+test_srcs = \
+  tests/error_handler_unittest.cpp \
+  tests/http_parser_unittest.cpp \
+  tests/http_response_unittest.cpp \
+  tests/router_unittest.cpp \
+  tests/static_file_handler_unittest.cpp \
+  tests/str_split_unittest.cpp \
+  tests/main.cpp \
+
+test_cpps = $(filter %.cpp,$(test_srcs))
+
+test_objs = $(patsubst tests/%.cpp,build/$(CONFIG)/obj_tests/%.o,$(test_cpps))
+test_deps = $(test_objs:.o=.d)
+
+all_cpps = $(cpps) $(test_cpps)
+all_hpps = $(hpps)
+all_deps = $(deps) $(test_deps)
+
+# Build main target
+PHONY += all run
+all: $(target)
 
 run: all
-	./$(TARGET)
+	./$(target)
 
-val: all
-	valgrind ./$(TARGET)
-
-$(TARGET): $(OBJS)
+$(target): $(objs)
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(OBJS) -o $@
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(objs) -o $@
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+build/$(CONFIG)/obj/%.o: src/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
 
-# Default cleaning targets
-PHONY += clean fclean re
-clean:
-	rm -rf $(OBJ_DIR)
-
-fclean: clean
-	rm -rf $(BIN_DIR)
-
-re: fclean all
-
-################################################################################
-# Unit tests
-
-TEST_NAME    = run_tests
-
-TEST_SRC_DIR = tests
-TEST_OBJ_DIR = $(BUILD_DIR)/obj_tests
-
-TEST_TARGET  = $(BIN_DIR)/$(TEST_NAME)
-
-# All tests sources (keep in alphabetical order)
-TEST_SRCS    = $(addprefix $(TEST_SRC_DIR)/, \
-               error_handler_unittest.cpp \
-               http_parser_unittest.cpp \
-               http_response_unittest.cpp \
-               router_unittest.cpp \
-               static_file_handler_unittest.cpp \
-               str_split_unittest.cpp \
-               main.cpp \
-)
-
-TEST_CPPS    = $(filter %.cpp,$(TEST_SRCS))
-
-TEST_OBJS    = $(patsubst $(TEST_SRC_DIR)/%,$(TEST_OBJ_DIR)/%,$(TEST_CPPS:.cpp=.o))
-TEST_DEPS    = $(TEST_OBJS:.o=.d)
-
-DEPS         += $(TEST_DEPS)
-
-# Test runner target
+# Build test target
 PHONY += test
-test: $(TEST_TARGET)
-	./$(TEST_TARGET)
+test: $(test_target)
+	@echo "Running unit tests..."
+	./$(test_target)
 
-$(TEST_TARGET): $(TEST_OBJS) $(filter-out $(OBJ_DIR)/main.o,$(OBJS))
+$(test_target): $(test_objs) $(filter-out build/$(CONFIG)/obj/main.o,$(objs))
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $^ -o $@
 
-$(TEST_OBJ_DIR)/%.o: $(TEST_SRC_DIR)/%.cpp
+build/$(CONFIG)/obj_tests/%.o: tests/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
 
-# Tests cleaning target
-PHONY += test-clean
-test-clean:
-	rm -rf $(TEST_OBJ_DIR) $(TEST_TARGET)
+# Cleanup rules
+PHONY += clean fclean re
+clean:
+	rm -rf build/$(CONFIG)
 
-################################################################################
-# Formatting and linting section
+fclean: clean
+	rm -rf build
 
-# If compiledb is not installed do `pipx install compiledb`.
-# compiledb is used to generate the compilation database (compile_commands.json)
-# used by clang-tidy.
+re: fclean all
 
+# Formatting and linting rules
 PHONY += db format lint check
 db:
 	compiledb -n $(MAKE)
 
 format:
-	clang-format -style=file --dry-run -Werror $(CPPS) $(HPPS)
+	clang-format --style=file --dry-run --Werror $(all_cpps) $(all_hpps)
 
 lint: db
-	clang-tidy -p=. --header-filter=.* --warnings-as-errors=* $(CPPS)
+	clang-tidy -p=. --header-filter=src/ --warnings-as-errors=* $(all_cpps)
 
+# Rule used by GitHub CI
 check: format lint test
 
-# Careful, these targets will overwrite files.
-# Make sure to use `make check` before committing irreversible changes.
-PHONY += format-fix lint-fix fix
-format-fix:
-	clang-format -style=file -i $(CPPS) $(HPPS)
-
-lint-fix: db
-	clang-tidy -p=. --header-filter=.* -fix $(CPPS)
-
-fix: format-fix lint-fix
-
-
-
-# Include dependencies
--include $(DEPS)
+-include $(all_deps)
 
 .PHONY: $(PHONY)

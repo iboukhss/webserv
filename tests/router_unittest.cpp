@@ -134,12 +134,12 @@ UTEST(RouterTest, BuildRequestPath)
 
     Router router(config);
 
-    Handler* handler_ = router.handle_request(req);
+    Handler* handler = router.handle_request(req);
 
-    StaticFileHandler* sfh = dynamic_cast<StaticFileHandler*>(handler_);
+    StaticFileHandler* sfh = dynamic_cast<StaticFileHandler*>(handler);
     ASSERT_TRUE(sfh != NULL);
     ASSERT_STREQ(sfh->path().c_str(), "www/site1/index.html");
-    delete handler_;
+    delete handler;
 }
 
 UTEST(RouterTest, BuildRequestPath_Long)
@@ -153,13 +153,13 @@ UTEST(RouterTest, BuildRequestPath_Long)
 
     Router router(config);
 
-    Handler* handler_ = router.handle_request(req);
-    ASSERT_TRUE(handler_ != NULL);
+    Handler* handler = router.handle_request(req);
+    ASSERT_TRUE(handler != NULL);
 
-    StaticFileHandler* sfh = dynamic_cast<StaticFileHandler*>(handler_);
+    StaticFileHandler* sfh = dynamic_cast<StaticFileHandler*>(handler);
     ASSERT_TRUE(sfh != NULL); // REQUIRED
 
     ASSERT_STREQ(sfh->path().c_str(), "www/example/test_subfolder/test_subfolder/someFile.txt");
 
-    delete handler_;
+    delete handler;
 }
