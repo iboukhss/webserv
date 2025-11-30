@@ -3,6 +3,8 @@
 #include <cstdio>
 #include <cstdlib>
 
+LogMessage::Level LogMessage::g_log_level = LogMessage::kLevelInfo;
+
 LogMessage::LogMessage(LogMessage::Level level)
     : level_(level)
 {
@@ -10,7 +12,8 @@ LogMessage::LogMessage(LogMessage::Level level)
 
 LogMessage::~LogMessage()
 {
-    print_message();
+    if (level_ <= g_log_level)
+        print_message();
 
     if (level_ == kLevelFatal)
         std::abort();
@@ -30,11 +33,11 @@ void LogMessage::print_message()
 LogMessage::Color LogMessage::get_color() const
 {
     switch (level_) {
-    case kLevelDebug:   return kColorBlue;
-    case kLevelInfo:    return kColorReset;
-    case kLevelWarning: return kColorYellow;
-    case kLevelError:   return kColorRed;
     case kLevelFatal:   return kColorRed;
+    case kLevelError:   return kColorRed;
+    case kLevelWarning: return kColorYellow;
+    case kLevelInfo:    return kColorReset;
+    case kLevelDebug:   return kColorBlue;
     }
 
     NOTREACHED();
@@ -44,11 +47,11 @@ LogMessage::Color LogMessage::get_color() const
 const char* LogMessage::level_string(LogMessage::Level level)
 {
     switch (level) {
-    case kLevelDebug:   return "DEBUG";
-    case kLevelInfo:    return "INFO";
-    case kLevelWarning: return "WARN";
-    case kLevelError:   return "ERROR";
     case kLevelFatal:   return "FATAL";
+    case kLevelError:   return "ERROR";
+    case kLevelWarning: return "WARN";
+    case kLevelInfo:    return "INFO";
+    case kLevelDebug:   return "DEBUG";
     }
 
     NOTREACHED();

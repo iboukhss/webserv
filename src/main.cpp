@@ -1,12 +1,15 @@
 #include "config/server_config.hpp"
 #include "core/server.hpp"
 #include "core/signals.hpp"
+#include "util/log_message.hpp"
 #include "util/syscall_error.hpp"
 
 #include <iostream>
 
 int main(void)
 {
+    // Keep this until release
+    LogMessage::g_log_level = LogMessage::kLevelDebug;
     setup_signal_handlers();
 
     try {

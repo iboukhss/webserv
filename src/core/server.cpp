@@ -92,6 +92,7 @@ void Server::close_connection(Client& conn)
 
     delete it->second;
     clients_.erase(client_id);
+    LOG(DEBUG) << "Client #" << client_id << ": connection closed";
 }
 
 Client& Server::get_client(uint64_t id)
@@ -122,11 +123,13 @@ void Server::accept_connection()
     ev.data.u64 = client_id;
     epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, client_fd, &ev);
 
-    LOG(INFO) << "Client #" << client_id << " connected";
+    LOG(DEBUG) << "Client #" << client_id << ": connection accepted";
 }
 
 void Server::run()
 {
+    LOG(INFO) << "Server started!";
+
     while (!g_sigint_received) {
         int n_events = epoll_wait(epoll_fd_, events_, WEBSERV_MAX_EVENTS, -1);
         if (n_events == -1) {
@@ -153,6 +156,7 @@ void Server::run()
             }
         }
     }
+    LOG(INFO) << "Shutting down server...";
 }
 
 // Dirty hack
@@ -182,6 +186,8 @@ static void print_raw_data(const char* s, size_t n)
 void Server::handle_events(Client& conn, uint32_t events)
 {
     char tmp[4096];
+    uint64_t client_id = conn.id();
+    HttpParser& parser = conn.parser();
     uint32_t next_events = 0;
 
     // Can read from socket
@@ -190,33 +196,35 @@ void Server::handle_events(Client& conn, uint32_t events)
         size_t bytes_received = recv(conn.fd(), tmp, sizeof(tmp), 0);
 
         if (bytes_received == 0) {
+            LOG(INFO) << "Client #" << client_id << ": connection closed by remote client";
             close_connection(conn);
             return;
         }
 
-        LOG(DEBUG) << "Received " << bytes_received << " bytes from socket";
+        LOG(DEBUG) << "Client #" << client_id << ": " << bytes_received << " bytes received";
         print_raw_data(tmp, bytes_received);
 
         // Feed data to the parser
-        HttpParser& parser = conn.parser();
         parser.feed_data(tmp, bytes_received);
 
         if (parser.status() == HttpParser::kError) {
+            LOG(ERROR) << "Client #" << client_id << ": invalid HTTP request";
             close_connection(conn);
             return;
         }
 
         if (!conn.handler() && parser.status() >= HttpParser::kHeadersDone) {
-            Handler* h = router_.handle_request(parser.request());
+            HttpRequest req = parser.request();
+            LOG(INFO) << "Client #" << client_id << ": " << req.method << " " << req.path << " "
+                      << req.http_version;
+
+            Handler* h = router_.handle_request(req);
             conn.set_handler(h);
         }
         if (conn.handler()) {
             if (conn.handler()->needs_input()) {
                 size_t n = parser.slurp_data(tmp, sizeof(tmp));
                 (void) conn.handler()->write_data(tmp, n);
-            }
-            else {
-                LOG(DEBUG) << "conn.handler()->needs_input() == false";
             }
         }
     }
@@ -234,7 +242,18 @@ void Server::handle_events(Client& conn, uint32_t events)
             }
             if (!send_buffer.empty()) {
                 size_t bytes_sent = send(conn.fd(), send_buffer.data(), send_buffer.size(), 0);
-                send_buffer.erase(0, bytes_sent);
+                if (bytes_sent == 0) {
+                    LOG(WARN) << "Client #" << client_id << ": failed to send any bytes!";
+                }
+                else {
+                    send_buffer.erase(0, bytes_sent);
+                }
+            }
+            // Treat all connections as HTTP/1.0 for now (do not keep-alive)
+            if (send_buffer.empty() && handler.is_done()) {
+                LOG(DEBUG) << "Client #" << client_id << ": response sent";
+                close_connection(conn);
+                return;
             }
         }
     }
@@ -246,7 +265,7 @@ void Server::handle_events(Client& conn, uint32_t events)
         next_events |= EPOLLOUT;
 
     epoll_event ev;
-    ev.data.u64 = conn.id();
+    ev.data.u64 = client_id;
     ev.events = next_events;
     epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, conn.fd(), &ev);
 }

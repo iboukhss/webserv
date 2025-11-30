@@ -23,14 +23,14 @@ SRCS      = $(addprefix $(SRC_DIR)/, \
             core/signals.hpp \
             handler/static_file_handler.cpp \
             handler/static_file_handler.hpp \
-			handler/error_handler.cpp \
-			handler/error_handler.hpp \
+            handler/error_handler.cpp \
+            handler/error_handler.hpp \
             handler/handler.cpp \
             handler/handler.hpp \
             http/http_parser.cpp \
             http/http_parser.hpp \
+            http/http_request.cpp \
             http/http_request.hpp \
-			http/http_request.hpp \
             http/http_response.cpp \
             http/http_response.hpp \
             router/router.cpp \
@@ -104,15 +104,12 @@ TEST_TARGET  = $(BIN_DIR)/$(TEST_NAME)
 
 # All tests sources (keep in alphabetical order)
 TEST_SRCS    = $(addprefix $(TEST_SRC_DIR)/, \
+               error_handler_unittest.cpp \
                http_parser_unittest.cpp \
                http_response_unittest.cpp \
                router_unittest.cpp \
                static_file_handler_unittest.cpp \
                str_split_unittest.cpp \
-               main.cpp \
-			   error_handler_unittest.cpp \
-               http_response_unittest.cpp \
-			   router_unittest.cpp \
                main.cpp \
 )
 

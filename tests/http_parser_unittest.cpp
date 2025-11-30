@@ -1,38 +1,67 @@
 #include "http/http_parser.hpp"
 #include "utest/utest.h"
 
-UTEST(HttpParserTest, FullRequestLine)
+UTEST(HttpParserTest, BasicRequestLine)
 {
     HttpParser p;
-    std::string req = "GET /index.html HTTP/1.1\r\n";
-
-    ASSERT_TRUE(p.status() == HttpParser::kIncomplete);
+    std::string req = "GET /index.html HTTP/1.0\r\n";
 
     p.feed_data(req.data(), req.size());
     ASSERT_TRUE(p.status() == HttpParser::kRequestLineDone);
 
     EXPECT_TRUE(p.request().method == "GET");
     EXPECT_TRUE(p.request().path == "/index.html");
-    EXPECT_TRUE(p.request().http_version == "HTTP/1.1");
+    EXPECT_TRUE(p.request().http_version == "HTTP/1.0");
+}
+
+UTEST(HttpParserTest, FullRequestZeroBody)
+{
+    HttpParser p;
+    std::string req = "GET /index.html HTTP/1.0\r\n"
+                      "\r\n"
+                      "\r\n";
+
+    p.feed_data(req.data(), req.size());
+    ASSERT_TRUE(p.status() == HttpParser::kBodyDone);
+
+    EXPECT_TRUE(p.request().method == "GET");
+    EXPECT_TRUE(p.request().path == "/index.html");
+    EXPECT_TRUE(p.request().http_version == "HTTP/1.0");
+    EXPECT_TRUE(p.request().content_length == 0);
+    EXPECT_FALSE(p.request().keep_alive);
 }
 
 UTEST(HttpParserTest, InvalidMethod)
 {
     HttpParser p;
-    std::string req = "GET/index.html HTTP/1.1\r\n";
-
-    ASSERT_TRUE(p.status() == HttpParser::kIncomplete);
+    std::string req = "PUT /index.html HTTP/1.0\r\n";
 
     p.feed_data(req.data(), req.size());
     ASSERT_TRUE(p.status() == HttpParser::kError);
 }
 
+UTEST(HttpParserTest, ImportantHeaders)
+{
+    HttpParser p;
+    std::string req = "GET /index.html HTTP/1.1\r\n"
+                      "Content-Length: 5\r\n"
+                      "Connection: Keep-Alive\r\n"
+                      "\r\n";
+
+    p.feed_data(req.data(), req.size());
+    ASSERT_TRUE(p.status() == HttpParser::kHeadersDone);
+
+    EXPECT_TRUE(p.request().method == "GET");
+    EXPECT_TRUE(p.request().path == "/index.html");
+    EXPECT_TRUE(p.request().http_version == "HTTP/1.1");
+    EXPECT_TRUE(p.request().content_length == 5);
+    EXPECT_TRUE(p.request().keep_alive);
+}
+
 UTEST(HttpParserTest, PartialFeed)
 {
     HttpParser p;
-    std::string req = "GET /index.html HTTP/1.1\r\n";
-
-    ASSERT_TRUE(p.status() == HttpParser::kIncomplete);
+    std::string req = "GET /index.html HTTP/1.0\r\n";
 
     size_t crlf = req.find("\r\n");
 
@@ -44,5 +73,24 @@ UTEST(HttpParserTest, PartialFeed)
 
     EXPECT_TRUE(p.request().method == "GET");
     EXPECT_TRUE(p.request().path == "/index.html");
-    EXPECT_TRUE(p.request().http_version == "HTTP/1.1");
+    EXPECT_TRUE(p.request().http_version == "HTTP/1.0");
+}
+
+UTEST(HttpParserTest, ByteByByteFeed)
+{
+    HttpParser p;
+    std::string req = "GET /index.html HTTP/1.0\r\n"
+                      "\r\n"
+                      "\r\n";
+
+    for (size_t i = 0; i < req.size(); i++) {
+        p.feed_data(&req[i], 1);
+    }
+
+    ASSERT_TRUE(p.status() == HttpParser::kBodyDone);
+    EXPECT_TRUE(p.request().method == "GET");
+    EXPECT_TRUE(p.request().path == "/index.html");
+    EXPECT_TRUE(p.request().http_version == "HTTP/1.0");
+    EXPECT_TRUE(p.request().content_length == 0);
+    EXPECT_FALSE(p.request().keep_alive);
 }

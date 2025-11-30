@@ -6,7 +6,14 @@
 
 class LogMessage {
 public:
-    enum Level { kLevelDebug, kLevelInfo, kLevelWarning, kLevelError, kLevelFatal };
+    enum Level {
+        kLevelFatal = 0,
+        kLevelError = 1,
+        kLevelWarning = 2,
+        kLevelInfo = 3,
+        kLevelDebug = 4
+    };
+
     enum Color { kColorReset, kColorRed, kColorGreen, kColorYellow, kColorBlue };
 
     explicit LogMessage(LogMessage::Level level);
@@ -15,16 +22,17 @@ public:
     template <typename T>
     LogMessage& operator<<(const T& value)
     {
-        stream_ << value;
+        if (level_ <= g_log_level)
+            stream_ << value;
         return *this;
     }
 
+    static LogMessage::Level g_log_level;
+
 private:
-    LogMessage();
     LogMessage(const LogMessage&);
     LogMessage& operator=(const LogMessage&);
 
-private:
     static const char* color_string(LogMessage::Color color);
     static const char* level_string(LogMessage::Level level);
 
@@ -36,11 +44,11 @@ private:
     std::ostringstream stream_;
 };
 
-#define LOG_DEBUG LogMessage(LogMessage::kLevelDebug)
-#define LOG_INFO  LogMessage(LogMessage::kLevelInfo)
-#define LOG_WARN  LogMessage(LogMessage::kLevelWarning)
-#define LOG_ERROR LogMessage(LogMessage::kLevelError)
-#define LOG_FATAL LogMessage(LogMessage::kLevelFatal)
+#define LOG_FATAL  LogMessage(LogMessage::kLevelFatal)
+#define LOG_ERROR  LogMessage(LogMessage::kLevelError)
+#define LOG_WARN   LogMessage(LogMessage::kLevelWarning)
+#define LOG_INFO   LogMessage(LogMessage::kLevelInfo)
+#define LOG_DEBUG  LogMessage(LogMessage::kLevelDebug)
 
 #define LOG(level) LOG_##level
 

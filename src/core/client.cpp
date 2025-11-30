@@ -15,7 +15,6 @@ Client::Client(uint64_t id, int fd, const sockaddr_in& addr)
       handler_(NULL)
 {
     set_nonblocking();
-    LOG(DEBUG) << "Client constructor called";
 }
 
 Client::~Client()
@@ -26,7 +25,6 @@ Client::~Client()
     if (handler_) {
         delete handler_;
     }
-    LOG(DEBUG) << "Client destructor called";
 }
 
 void Client::set_nonblocking()

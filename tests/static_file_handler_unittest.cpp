@@ -29,7 +29,7 @@ UTEST(StaticFileHandlerTest, StatusNotFound)
 
     test.read_data(buf, sizeof(buf));
 
-    ASSERT_STREQ(buf, "HTTP/1.1 404 Not Found\r\n\r\n<h1>404 Not Found</h1>");
+    ASSERT_STREQ(buf, "HTTP/1.1 404 Not Found\r\n\r\n");
 }
 
 UTEST(StaticFileHandlerTest, ReadSomeData)

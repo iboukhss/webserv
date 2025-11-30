@@ -23,6 +23,7 @@ AlignConsecutiveShortCaseStatements:
 AlignEscapedNewlines: DontAlign
 AlignConsecutiveMacros:
   Enabled: true
+  AcrossEmptyLines: true
 
 # Fails on ubuntu-latest
 #BreakTemplateDeclarations: Yes

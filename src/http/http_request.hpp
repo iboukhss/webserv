@@ -5,10 +5,13 @@
 #include <string>
 
 struct HttpRequest {
+    HttpRequest();
+
     std::string method;
     std::string path;
     std::string http_version;
 
+    // Headers
     size_t content_length;
     bool is_chunked;
     bool keep_alive;

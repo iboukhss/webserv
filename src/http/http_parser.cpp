@@ -1,7 +1,9 @@
 #include "http/http_parser.hpp"
 
+#include "util/log_message.hpp"
 #include "util/string.hpp"
 
+#include <cstdlib>
 #include <cstring>
 
 HttpParser::HttpParser()
@@ -11,8 +13,10 @@ HttpParser::HttpParser()
 
 void HttpParser::feed_data(const char* buf, size_t n)
 {
-    if (status_ == kError)
+    if (status_ == kError || status_ == kBodyDone) {
+        LOG(WARN) << "Parser rejected some data (" << n << "bytes)";
         return;
+    }
 
     buffer_.append(buf, n);
 
@@ -107,7 +111,20 @@ void HttpParser::parse_headers()
 
         std::string name = v[i].substr(0, colon);
         std::string value = str_trim(v[i].substr(colon + 1));
-        req_.headers[name] = value;
+
+        if (name == "Content-Length") {
+            // This is terrible but it will do for now
+            req_.content_length = std::atoi(value.c_str());
+        }
+        else if (name == "Transfer-Encoding" && value == "Chunked") {
+            req_.is_chunked = true;
+        }
+        else if (name == "Connection" && value == "Keep-Alive") {
+            req_.keep_alive = true;
+        }
+        else {
+            req_.headers[name] = value;
+        }
     }
 
     buffer_.erase(0, pos + 4);
@@ -118,4 +135,7 @@ void HttpParser::parse_body()
 {
     if (status_ != kHeadersDone)
         return;
+
+    if (req_.content_length == 0)
+        status_ = kBodyDone;
 }
