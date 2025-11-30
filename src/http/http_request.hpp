@@ -11,11 +11,12 @@ struct HttpRequest {
     std::string path;
     std::string http_version;
 
-    // Headers
+    // Try to keep feature parity with HttpResponse if applicable here.
     size_t content_length;
     bool is_chunked;
     bool keep_alive;
 
+    // Useless headers we do not support, but might need eventually.
     std::map<std::string, std::string> headers;
 
     std::string body;

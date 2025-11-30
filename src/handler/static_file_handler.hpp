@@ -12,8 +12,8 @@ public:
     explicit StaticFileHandler(const std::string& path);
     virtual ~StaticFileHandler();
 
-    virtual int read_data(char* buf, int n);
-    virtual int write_data(const char* buf, int n);
+    virtual size_t read_data(char* buf, size_t n);
+    virtual size_t write_data(const char* buf, size_t n);
 
     virtual bool has_output() const { return !headers_sent() || (has_body() && !body_sent()); }
     virtual bool needs_input() const { return false; };

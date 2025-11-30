@@ -1,25 +1,39 @@
 #ifndef HTTP_HTTP_RESPONSE_HPP_
 #define HTTP_HTTP_RESPONSE_HPP_
 
-#include <map>
 #include <string>
 
 struct HttpResponse {
 public:
     enum Status {
-        kOk = 200,
-        kBadRequest = 400,
-        kForbidden = 403,
-        kNotFound = 404,
-        kMethodNotAllowed = 405,
-        kInternalServerError = 500,
-        kNotImplemented = 501
+        kStatusOk = 200,
+        kStatusBadRequest = 400,
+        kStatusForbidden = 403,
+        kStatusNotFound = 404,
+        kStatusMethodNotAllowed = 405,
+        kStatusInternalServerError = 500,
+        kStatusNotImplemented = 501
     };
+
+    HttpResponse();
 
     std::string http_version;
     HttpResponse::Status code;
-    std::map<std::string, std::string> headers;
-    std::string body;
+
+    // No need for generic headers here with a string map, we should already
+    // know what kind of headers we support on the server.
+    // It also makes sense to mirror what we have on the request side.
+    // Caution when rearranging the order below, it will break tests.
+
+    std::string content_type;
+    size_t content_length;
+    bool is_chunked;
+    bool keep_alive;
+
+    // Only use this to store small, well-known, predefined bodies.
+    // Regular file data should be streamed via the handler interface.
+    // I think this is bad design but it seems to be useful.
+    std::string inline_body;
 
     std::string to_string() const;
 

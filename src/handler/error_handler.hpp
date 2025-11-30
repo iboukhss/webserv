@@ -11,8 +11,8 @@ public:
     explicit ErrorHandler(HttpResponse::Status code);
     virtual ~ErrorHandler();
 
-    virtual int read_data(char* buf, int n);
-    virtual int write_data(const char* buf, int n);
+    virtual size_t read_data(char* buf, size_t n);
+    virtual size_t write_data(const char* buf, size_t n);
 
     virtual bool has_output() const { return (!res_sent_); };
     virtual bool needs_input() const { return (false); };

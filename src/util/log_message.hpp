@@ -2,6 +2,7 @@
 #define UTIL_LOG_MESSAGE_HPP_
 
 #include <cassert>
+#include <cstdio>
 #include <sstream>
 
 class LogMessage {

@@ -3,7 +3,11 @@
 #include <cstdio>
 #include <cstdlib>
 
+#ifdef DEBUG
+LogMessage::Level LogMessage::g_log_level = LogMessage::kLevelDebug;
+#else
 LogMessage::Level LogMessage::g_log_level = LogMessage::kLevelInfo;
+#endif
 
 LogMessage::LogMessage(LogMessage::Level level)
     : level_(level)

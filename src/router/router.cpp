@@ -98,29 +98,31 @@ std::string Router::build_request_path(const HttpRequest& request, const Locatio
     return (full_path);
 }
 
+// Expectations:
+// Parser does not check allowed methods (only the syntax)
+// Parser does not allow empty URI (invalid format)
+// Parser always checks if URI starts with a / (forward slash)
 Handler* Router::handle_request(const HttpRequest& request)
 {
     if (!is_valid_method(request.method)) {
-        return new ErrorHandler(HttpResponse::kMethodNotAllowed); // 405->should not occur as
-                                                                  // checked during request parsing
+        return new ErrorHandler(
+            HttpResponse::kStatusMethodNotAllowed); // 405->should not occur as
+                                                    // checked during request parsing
     }
     if (request.path.empty()) {
-        return new ErrorHandler(
-            HttpResponse::kBadRequest); // 400->should not occur as checked during request parsing
+        return new ErrorHandler(HttpResponse::kStatusBadRequest); // 400->should not occur as
+                                                                  // checked during request parsing
     }
     const Location* longest_match = routing(request.path);
     if (!longest_match) {
-        return new ErrorHandler(HttpResponse::kNotFound); // 404->should not occur as routing always
-                                                          // returns fallback root path
+        return new ErrorHandler(HttpResponse::kStatusNotFound); // 404->should not occur as routing
+                                                                // always returns fallback root path
     }
     std::string full_path = build_request_path(request, longest_match);
     if (request.method == "GET") {
         return new StaticFileHandler(full_path);
     }
 
-    // Add other handlers here
-
-    // Fallback, should never happen in theory
-    std::cerr << "Something terrible happened in the router" << std::endl;
-    return new ErrorHandler(HttpResponse::kInternalServerError); // 500
+    NOTREACHED();
+    return new ErrorHandler(HttpResponse::kStatusInternalServerError); // 500
 }

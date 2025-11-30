@@ -1,12 +1,14 @@
 #ifndef HANDLER_HANDLER_HPP_
 #define HANDLER_HANDLER_HPP_
 
+#include <cstddef>
+
 class Handler {
 public:
     virtual ~Handler() {}
 
-    virtual int read_data(char* buf, int n) = 0;
-    virtual int write_data(const char* buf, int n) = 0;
+    virtual size_t read_data(char* buf, size_t n) = 0;
+    virtual size_t write_data(const char* buf, size_t n) = 0;
 
     virtual bool has_output() const = 0;
     virtual bool needs_input() const = 0;

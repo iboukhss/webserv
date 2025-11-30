@@ -21,33 +21,29 @@ StaticFileHandler::StaticFileHandler(const std::string& path)
 {
     struct stat file_stat;
     HttpResponse res;
-    res.http_version = "HTTP/1.1";
 
     LOG(DEBUG) << "Trying to open file: " << path;
 
     if (stat(path.c_str(), &file_stat) != 0 || !S_ISREG(file_stat.st_mode)) {
-        res.code = HttpResponse::kNotFound;
+        res.code = HttpResponse::kStatusNotFound;
+        res.content_type = "text/html; charset=UTF-8"; // Magic to display emojis
+        res.inline_body = "<h1>404 Not Found 😢</h1>";
         headers_ = res.to_string();
         return;
     }
 
     fd_ = open(path.c_str(), O_RDONLY);
     if (fd_ == -1) {
-        res.code = HttpResponse::kInternalServerError;
+        res.code = HttpResponse::kStatusInternalServerError;
         headers_ = res.to_string();
         return;
     }
 
     file_size_ = file_stat.st_size;
 
-    std::ostringstream oss;
-
-    oss << file_size_;
-
-    res.code = HttpResponse::kOk;
-    res.headers["Content-Type"] = derive_file_type();
-    res.headers["Content-Length"] = oss.str();
-    res.headers["Connection"] = "keep-alive";
+    res.code = HttpResponse::kStatusOk;
+    res.content_type = derive_file_type();
+    res.content_length = file_size_;
 
     headers_ = res.to_string();
 }
@@ -58,13 +54,13 @@ StaticFileHandler::~StaticFileHandler()
         close(fd_);
 }
 
-int StaticFileHandler::read_data(char* buf, int n)
+size_t StaticFileHandler::read_data(char* buf, size_t n)
 {
-    int bytes_written = 0;
+    size_t bytes_written = 0;
 
     if (!headers_sent()) {
-        int hdrs_bytes = headers_.size() - headers_off_;
-        int to_copy = std::min(hdrs_bytes, n);
+        size_t hdrs_bytes = headers_.size() - headers_off_;
+        size_t to_copy = std::min(hdrs_bytes, n);
 
         std::memcpy(buf, headers_.data() + headers_off_, to_copy);
         headers_off_ += to_copy;
@@ -89,7 +85,7 @@ int StaticFileHandler::read_data(char* buf, int n)
 }
 
 // We never write to this handler (read-only)
-int StaticFileHandler::write_data(const char* buf, int n)
+size_t StaticFileHandler::write_data(const char* buf, size_t n)
 {
     (void) buf;
     (void) n;
@@ -104,9 +100,9 @@ const std::string StaticFileHandler::derive_file_type()
 
     std::string ext = file_path_.substr(pos + 1);
     if (ext == "html" || ext == "htm")
-        return "text/html";
+        return "text/html; charset=UTF-8";
     else if (ext == "txt")
-        return "text/plain";
+        return "text/plain; charset=UTF-8";
     else if (ext == "css")
         return "text/css";
     else if (ext == "js")

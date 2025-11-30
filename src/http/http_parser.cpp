@@ -56,6 +56,9 @@ static bool is_valid_request_line(const std::vector<std::string>& v)
     if (v[0] != "GET" && v[0] != "POST" && v[0] != "DELETE")
         return false;
 
+    if (v[1].empty() || v[1][0] != '/')
+        return false;
+
     if (v[2] != "HTTP/1.0" && v[2] != "HTTP/1.1")
         return false;
 

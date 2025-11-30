@@ -15,28 +15,28 @@ UTEST(ErrorHandlerTest, ErrorCode)
 
 UTEST(ErrorHandlerTest, is_done)
 {
-    ErrorHandler* handler = new ErrorHandler(HttpResponse::kBadRequest);
+    ErrorHandler* handler = new ErrorHandler(HttpResponse::kStatusBadRequest);
     ASSERT_FALSE(handler->is_done());
     delete (handler);
 }
 
 UTEST(ErrorHandlerTest, has_output)
 {
-    ErrorHandler* handler = new ErrorHandler(HttpResponse::kNotFound);
+    ErrorHandler* handler = new ErrorHandler(HttpResponse::kStatusNotFound);
     ASSERT_TRUE(handler->has_output());
     delete (handler);
 }
 
 UTEST(ErrorHandlerTest, needs_)
 {
-    ErrorHandler* handler = new ErrorHandler(HttpResponse::kInternalServerError);
+    ErrorHandler* handler = new ErrorHandler(HttpResponse::kStatusInternalServerError);
     ASSERT_FALSE(handler->needs_input());
     delete (handler);
 }
 
 UTEST(ErrorHandlerTest, error_code)
 {
-    ErrorHandler* handler = new ErrorHandler(HttpResponse::kInternalServerError);
+    ErrorHandler* handler = new ErrorHandler(HttpResponse::kStatusInternalServerError);
     ASSERT_EQ(handler->error_code(), 500);
     delete (handler);
 }
