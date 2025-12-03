@@ -116,13 +116,13 @@ void HttpParser::parse_headers()
         std::string value = str_trim(v[i].substr(colon + 1));
 
         if (name == "Content-Length") {
-            // This is terrible but it will do for now
+            // This is terrible but it will do the job for now
             req_.content_length = std::atoi(value.c_str());
         }
-        else if (name == "Transfer-Encoding" && value == "Chunked") {
+        else if (name == "Transfer-Encoding" && value == "chunked") {
             req_.is_chunked = true;
         }
-        else if (name == "Connection" && value == "Keep-Alive") {
+        else if (name == "Connection" && value == "keep-alive") {
             req_.keep_alive = true;
         }
         else {

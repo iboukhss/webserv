@@ -33,7 +33,7 @@ std::string HttpResponse::to_string() const
     if (is_chunked)
         out << "Transfer-Encoding: chunked\r\n";
 
-    out << "Connection: " << (keep_alive ? "Keep-Alive" : "close") << "\r\n";
+    out << "Connection: " << (keep_alive ? "keep-alive" : "close") << "\r\n";
 
     out << "\r\n";
     out << inline_body;

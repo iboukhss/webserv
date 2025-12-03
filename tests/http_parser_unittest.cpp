@@ -7,7 +7,7 @@ UTEST(HttpParserTest, BasicRequestLine)
     std::string req = "GET /index.html HTTP/1.0\r\n";
 
     p.feed_data(req.data(), req.size());
-    ASSERT_TRUE(p.status() == HttpParser::kRequestLineDone);
+    ASSERT_TRUE(p.status() == HttpParser::kParsingHeaders);
 
     EXPECT_TRUE(p.request().method == "GET");
     EXPECT_TRUE(p.request().path == "/index.html");
@@ -37,7 +37,7 @@ UTEST(HttpParserTest, InvalidMethod)
     std::string req = "PUT /index.html HTTP/1.0\r\n";
 
     p.feed_data(req.data(), req.size());
-    ASSERT_TRUE(p.status() == HttpParser::kError);
+    ASSERT_TRUE(p.status() == HttpParser::kParsingError);
 }
 
 UTEST(HttpParserTest, ImportantHeaders)
@@ -45,11 +45,11 @@ UTEST(HttpParserTest, ImportantHeaders)
     HttpParser p;
     std::string req = "GET /index.html HTTP/1.1\r\n"
                       "Content-Length: 5\r\n"
-                      "Connection: Keep-Alive\r\n"
+                      "Connection: keep-alive\r\n"
                       "\r\n";
 
     p.feed_data(req.data(), req.size());
-    ASSERT_TRUE(p.status() == HttpParser::kHeadersDone);
+    ASSERT_TRUE(p.status() == HttpParser::kParsingBody);
 
     EXPECT_TRUE(p.request().method == "GET");
     EXPECT_TRUE(p.request().path == "/index.html");
@@ -66,10 +66,10 @@ UTEST(HttpParserTest, PartialFeed)
     size_t crlf = req.find("\r\n");
 
     p.feed_data(req.data(), crlf);
-    ASSERT_TRUE(p.status() == HttpParser::kIncomplete);
+    ASSERT_TRUE(p.status() == HttpParser::kParsingRequestLine);
 
     p.feed_data(req.data() + crlf, 2);
-    ASSERT_TRUE(p.status() == HttpParser::kRequestLineDone);
+    ASSERT_TRUE(p.status() == HttpParser::kParsingHeaders);
 
     EXPECT_TRUE(p.request().method == "GET");
     EXPECT_TRUE(p.request().path == "/index.html");
