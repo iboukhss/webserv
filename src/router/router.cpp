@@ -3,6 +3,7 @@
 #include "config/server_config.hpp"
 #include "handler/error_handler.hpp"
 #include "handler/static_file_handler.hpp"
+#include "handler/upload_handler.hpp"
 #include "http/http_request.hpp"
 #include "http/http_response.hpp"
 #include "util/log_message.hpp"
@@ -122,7 +123,13 @@ Handler* Router::handle_request(const HttpRequest& request)
     if (request.method == "GET") {
         return new StaticFileHandler(full_path);
     }
+    if (request.method == "POST") {
+        return new UploadHandler(full_path, request.content_length);
+    }
+    /*  if (request.method == "DELETE") {
+            return new DeleteHandler(full_path);*/
 
-    NOTREACHED();
+    // Fallback, should never happen in theory
+    std::cerr << "Something terrible happened in the router" << std::endl;
     return new ErrorHandler(HttpResponse::kStatusInternalServerError); // 500
 }

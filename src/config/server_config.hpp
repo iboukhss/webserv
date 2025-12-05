@@ -25,6 +25,7 @@ struct ServerConfig {
     std::vector<std::string> methods; // allowed methods
 
     Location default_location;
+    Location upload_location;
     std::vector<Location> locations;
 };
 

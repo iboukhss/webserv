@@ -9,8 +9,9 @@ size_t ErrorHandler::read_data(char* buf, size_t n)
 {
     std::string res = res_.to_string();
     LOG(DEBUG) << res;
-    std::memcpy(buf, &res, n);
-    return (res.size());
+    size_t to_copy = std::min(res.size(), n);
+    std::memcpy(buf, res.data(), to_copy);
+    return (to_copy);
 }
 
 // We never write to this handler (read-only)

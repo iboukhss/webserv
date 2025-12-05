@@ -7,12 +7,15 @@ struct HttpResponse {
 public:
     enum Status {
         kStatusOk = 200,
+        kStatusCreated = 201,
         kStatusBadRequest = 400,
         kStatusForbidden = 403,
         kStatusNotFound = 404,
         kStatusMethodNotAllowed = 405,
+        kStatusConflict = 409,
         kStatusInternalServerError = 500,
-        kStatusNotImplemented = 501
+        kStatusNotImplemented = 501,
+        kStatusDiskFull = 507
     };
 
     HttpResponse();

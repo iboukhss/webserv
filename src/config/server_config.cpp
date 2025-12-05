@@ -35,6 +35,12 @@ ServerConfig make_site1_config()
     cfg.default_location.index = "index.html";
 
     // ------------------------
+    // Upload location
+    // ------------------------
+    cfg.upload_location.path = "/upload";
+    cfg.upload_location.index = "index.html";
+
+    // ------------------------
     // Other locations
     // ------------------------
     Location loc1;

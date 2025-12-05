@@ -37,6 +37,8 @@ srcs = \
   src/handler/handler.hpp \
   src/handler/static_file_handler.cpp \
   src/handler/static_file_handler.hpp \
+  src/handler/upload_handler.cpp \
+  src/handler/upload_handler.hpp \
   src/http/http_parser.cpp \
   src/http/http_parser.hpp \
   src/http/http_request.cpp \
@@ -62,6 +64,7 @@ deps = $(objs:.o=.d)
 
 # Test sources (keep in alphabetical order)
 test_srcs = \
+  tests/upload_handler_unittest.cpp \
   tests/error_handler_unittest.cpp \
   tests/http_parser_unittest.cpp \
   tests/http_response_unittest.cpp \

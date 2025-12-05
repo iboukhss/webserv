@@ -45,11 +45,14 @@ const char* HttpResponse::reason_phrase(HttpResponse::Status code) const
 {
     switch (code) {
     case kStatusOk:                  return "OK";
+    case kStatusCreated:             return "File Created";
     case kStatusBadRequest:          return "Bad Request";
     case kStatusForbidden:           return "Forbidden";
     case kStatusNotFound:            return "Not Found";
     case kStatusMethodNotAllowed:    return "Method Not Allowed";
+    case kStatusConflict:            return "Conflict";
     case kStatusInternalServerError: return "Internal Server Error";
     case kStatusNotImplemented:      return "Not Implemented";
+    case kStatusDiskFull:            return "Disk Full";
     }
 }
