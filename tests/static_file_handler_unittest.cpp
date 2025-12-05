@@ -1,4 +1,5 @@
 #include "handler/static_file_handler.hpp"
+#include "http/http_version.hpp"
 #include "utest/utest.h"
 
 #include <iostream>
@@ -14,7 +15,8 @@ static bool str_contains(const std::string& haystack, const std::string& needle)
 
 UTEST(StaticFileHandlerTest, StatusOk)
 {
-    StaticFileHandler test("www/example/index.html");
+    HttpRequest dummy_request(kHttpVersion1_0);
+    StaticFileHandler test("www/example/index.html", dummy_request);
 
     char buf[4096] = {0};
     size_t n = test.read_data(buf, sizeof(buf));
@@ -22,13 +24,14 @@ UTEST(StaticFileHandlerTest, StatusOk)
 
     EXPECT_TRUE(str_contains(response, "HTTP/1.0 200 OK"));
     EXPECT_TRUE(str_contains(response, "Content-Length: 64"));
-    EXPECT_TRUE(str_contains(response,
-                             "<!DOCTYPE html><html><head><title>Example</title></head></html>\n"));
+    EXPECT_TRUE(str_contains(response, "<!DOCTYPE html>"
+                                       "<html><head><title>Example</title></head></html>\n"));
 }
 
 UTEST(StaticFileHandlerTest, StatusNotFound)
 {
-    StaticFileHandler test("www/example/inexistant.html");
+    HttpRequest dummy_request(kHttpVersion1_0);
+    StaticFileHandler test("www/example/inexistant.html", dummy_request);
 
     char buf[4096] = {0};
     size_t n = test.read_data(buf, sizeof(buf));
@@ -39,7 +42,8 @@ UTEST(StaticFileHandlerTest, StatusNotFound)
 
 UTEST(StaticFileHandlerTest, ReadSomeData)
 {
-    StaticFileHandler test("");
+    HttpRequest dummy_request;
+    StaticFileHandler test("", dummy_request);
 
     char buf[4096] = {0};
 
@@ -50,8 +54,9 @@ UTEST(StaticFileHandlerTest, ReadSomeData)
 
 UTEST(StaticFileHandlerTest, WriteNoData)
 {
+    HttpRequest dummy_request;
+    StaticFileHandler test("", dummy_request);
     char msg[] = "Hello, world!\n";
-    StaticFileHandler test("");
 
     EXPECT_TRUE(test.has_output());
     EXPECT_FALSE(test.needs_input());
@@ -60,7 +65,8 @@ UTEST(StaticFileHandlerTest, WriteNoData)
 
 UTEST(StaticFileHandlerTest, SmallBuffer)
 {
-    StaticFileHandler test("www/example/index.html");
+    HttpRequest dummy_request(kHttpVersion1_0);
+    StaticFileHandler test("www/example/index.html", dummy_request);
 
     char buf[1] = {0};
     std::string response;
@@ -71,6 +77,6 @@ UTEST(StaticFileHandlerTest, SmallBuffer)
 
     EXPECT_TRUE(str_contains(response, "HTTP/1.0 200 OK"));
     EXPECT_TRUE(str_contains(response, "Content-Length: 64"));
-    EXPECT_TRUE(str_contains(response,
-                             "<!DOCTYPE html><html><head><title>Example</title></head></html>\n"));
+    EXPECT_TRUE(str_contains(response, "<!DOCTYPE html>"
+                                       "<html><head><title>Example</title></head></html>\n"));
 }

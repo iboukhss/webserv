@@ -9,7 +9,8 @@
 #include <iostream>
 
 Client::Client(uint64_t id, int fd, const sockaddr_in& addr)
-    : id_(id),
+    : state_(kReceivingHeaders),
+      id_(id),
       fd_(fd),
       addr_(addr),
       handler_(NULL)

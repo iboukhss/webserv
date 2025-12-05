@@ -25,13 +25,12 @@ LogMessage::~LogMessage()
 
 void LogMessage::print_message()
 {
-    /* clang-format off */
-    fprintf(stderr, "%s[%s]%s %s\n",
-			color_string(get_color()),
-			level_string(level_),
-            color_string(kColorReset),
-			stream_.str().c_str());
-    /* clang-format on */
+    fprintf(stderr,
+            "%s[%s] %s\n%s",
+            color_string(get_color()),
+            level_string(level_),
+            stream_.str().c_str(),
+            color_string(kColorReset));
 }
 
 LogMessage::Color LogMessage::get_color() const

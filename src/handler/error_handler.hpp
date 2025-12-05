@@ -14,16 +14,17 @@ public:
     virtual size_t read_data(char* buf, size_t n);
     virtual size_t write_data(const char* buf, size_t n);
 
-    virtual bool has_output() const { return (!res_sent_); };
-    virtual bool needs_input() const { return (false); };
-    virtual bool is_done() const { return (res_sent_); };
+    virtual bool has_output() const { return (!res_sent_); }
+    virtual bool needs_input() const { return (false); }
+    virtual bool is_done() const { return (res_sent_); }
 
-    int error_code() { return res_.code; };
+    int error_code() { return res_.code; }
 
 private:
     ErrorHandler(const ErrorHandler&);
     ErrorHandler& operator=(const ErrorHandler&);
 
+    // NOTE: HttpResponse is default constructed with HTTP/1.1 + keep-alive
     HttpResponse res_;
     bool res_sent_;
 };

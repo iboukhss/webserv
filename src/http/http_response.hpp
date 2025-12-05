@@ -1,6 +1,9 @@
 #ifndef HTTP_HTTP_RESPONSE_HPP_
 #define HTTP_HTTP_RESPONSE_HPP_
 
+#include "core/server_defaults.hpp"
+#include "http/http_version.hpp"
+
 #include <string>
 
 struct HttpResponse {
@@ -18,9 +21,9 @@ public:
         kStatusDiskFull = 507
     };
 
-    HttpResponse();
+    explicit HttpResponse(HttpVersion protocol = WEBSERV_DEFAULT_HTTP_VERSION);
 
-    std::string http_version;
+    HttpVersion http_version;
     HttpResponse::Status code;
 
     // No need for generic headers here with a string map, we should already

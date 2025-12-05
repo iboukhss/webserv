@@ -1,10 +1,12 @@
 #ifndef SERVER_DEFAULTS_HPP_
 #define SERVER_DEFAULTS_HPP_
 
+#include "http/http_version.hpp"
+
 #define WEBSERV_DEFAULT_PORT          8080
 #define WEBSERV_DEFAULT_BACKLOG       128
 #define WEBSERV_DEFAULT_MAX_BODY_SIZE (1 << 20) // 1MB
 
-#define WEBSERV_DEFAULT_HTTP_VERSION  "HTTP/1.0"
+#define WEBSERV_DEFAULT_HTTP_VERSION  kHttpVersion1_1
 
 #endif // SERVER_DEFAULTS_HPP_

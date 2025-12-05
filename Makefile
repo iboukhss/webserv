@@ -45,6 +45,8 @@ srcs = \
   src/http/http_request.hpp \
   src/http/http_response.cpp \
   src/http/http_response.hpp \
+  src/http/http_version.cpp \
+  src/http/http_version.hpp \
   src/router/router.cpp \
   src/router/router.hpp \
   src/util/log_message.cpp \

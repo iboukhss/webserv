@@ -10,6 +10,9 @@ IndentAccessModifiers: false
 AccessModifierOffset: -4
 
 AllowShortFunctionsOnASingleLine: InlineOnly
+# Experimental flag, could fail at anytime
+ExperimentalAutoDetectBinPacking: true
+
 BreakConstructorInitializers: BeforeColon
 PackConstructorInitializers: Never
 

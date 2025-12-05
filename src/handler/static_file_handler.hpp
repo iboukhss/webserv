@@ -2,6 +2,7 @@
 #define HANDLER_GET_HANDLER_HPP_
 
 #include "handler/handler.hpp"
+#include "http/http_request.hpp"
 
 #include <sys/stat.h>
 
@@ -9,7 +10,7 @@
 
 class StaticFileHandler : public Handler {
 public:
-    explicit StaticFileHandler(const std::string& path);
+    StaticFileHandler(const std::string& path, const HttpRequest& request);
     virtual ~StaticFileHandler();
 
     virtual size_t read_data(char* buf, size_t n);
@@ -32,6 +33,7 @@ private:
 
     const std::string file_path_;
 
+    const HttpRequest& saved_request_;
     int fd_;
     off_t file_size_;
     bool eof_reached_;

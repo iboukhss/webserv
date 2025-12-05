@@ -121,7 +121,7 @@ Handler* Router::handle_request(const HttpRequest& request)
     }
     std::string full_path = build_request_path(request, longest_match);
     if (request.method == "GET") {
-        return new StaticFileHandler(full_path);
+        return new StaticFileHandler(full_path, request);
     }
     if (request.method == "POST") {
         return new UploadHandler(full_path, request.content_length);

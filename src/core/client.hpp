@@ -12,25 +12,25 @@
 
 class Client {
 public:
+    enum State { kClosingConnection = 0, kReceivingHeaders, kReceivingBody, kSendingResponse };
+
     Client(uint64_t id, int fd, const sockaddr_in& addr);
     ~Client();
 
     // setters
     void set_handler(Handler* handler) { handler_ = handler; }
     void set_nonblocking();
-    void set_request(const HttpRequest& req) { req_ = req; }
-    void set_response(const HttpResponse& res) { res_ = res; }
+    void set_state(Client::State state) { state_ = state; }
 
     // getters
+    Client::State state() { return state_; }
     uint64_t id() const { return id_; }
     int fd() const { return fd_; }
+    bool keep_alive() { return parser_.request().keep_alive; }
     const sockaddr_in& addr() const { return addr_; }
-    const HttpRequest& req() const { return req_; }
-    HttpResponse& res() { return res_; }
-
     std::string& send_buffer() { return send_buffer_; }
-    Handler* handler() const { return handler_; }
     HttpParser& parser() { return parser_; }
+    Handler* handler() const { return handler_; }
 
 private:
     Client();
@@ -38,11 +38,10 @@ private:
     Client& operator=(const Client& other);
 
 private:
+    Client::State state_;
     uint64_t id_;
     int fd_;
     sockaddr_in addr_;
-    HttpRequest req_;
-    HttpResponse res_; // TODO: remove
     std::string send_buffer_;
     HttpParser parser_;
     Handler* handler_;

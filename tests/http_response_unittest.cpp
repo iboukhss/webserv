@@ -3,8 +3,7 @@
 
 UTEST(HttpResponseTest, BasicStringHttp1_0)
 {
-    HttpResponse res;
-    res.http_version = "HTTP/1.0";
+    HttpResponse res(kHttpVersion1_0);
     res.code = HttpResponse::kStatusOk;
     res.content_type = "text/plain";
     res.inline_body = "Hello, world!\n";

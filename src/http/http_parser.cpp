@@ -1,5 +1,6 @@
 #include "http/http_parser.hpp"
 
+#include "http/http_version.hpp"
 #include "util/log_message.hpp"
 #include "util/string.hpp"
 
@@ -7,43 +8,53 @@
 #include <cstring>
 
 HttpParser::HttpParser()
-    : status_(HttpParser::kIncomplete)
+    : state_(kParsingRequestLine),
+      body_bytes_parsed_(0),
+      body_bytes_read_(0)
 {
 }
 
-void HttpParser::feed_data(const char* buf, size_t n)
+void HttpParser::append_data(const char* src, size_t n)
 {
-    if (status_ == kError || status_ == kBodyDone) {
-        LOG(WARN) << "Parser rejected some data (" << n << "bytes)";
+    if (state_ == kParsingError || state_ == kParsingDone) {
+        LOG(WARN) << "Parser rejected " << n << "bytes (invalid state)";
         return;
     }
 
-    buffer_.append(buf, n);
+    raw_buffer_.append(src, n);
 
     parse_request_line();
     parse_headers();
     parse_body();
 }
 
-static size_t min3(size_t a, size_t b, size_t c)
+void HttpParser::reset_for_next_request()
 {
-    return std::min(std::min(a, b), c);
+    assert(body_buffer_.empty());
+
+    if (!raw_buffer_.empty())
+        LOG(WARN) << "Server dropped " << raw_buffer_.size() << " bytes (pipelining not supported)";
+
+    state_ = kParsingRequestLine;
+    raw_buffer_.clear();
+    body_buffer_.clear();
+    body_bytes_parsed_ = 0;
+    body_bytes_read_ = 0;
+    req_ = HttpRequest();
 }
 
-size_t HttpParser::slurp_data(char* buf, size_t n)
+size_t HttpParser::read_body_chunk(char* dest, size_t n)
 {
-    if (status_ != kHeadersDone)
+    if (state_ != kParsingBody && state_ != kParsingDone)
         return 0;
 
-    size_t bytes_left = req_.content_length - bytes_slurped_;
-    size_t to_copy = min3(buffer_.size(), bytes_left, n);
+    assert(body_bytes_read_ < req_.content_length);
 
-    std::memcpy(buf, buffer_.data(), to_copy);
-    bytes_slurped_ += to_copy;
-    buffer_.erase(0, to_copy);
+    size_t to_copy = std::min(body_buffer_.size(), n);
 
-    if (bytes_slurped_ == req_.content_length)
-        status_ = kBodyDone;
+    std::memcpy(dest, body_buffer_.data(), to_copy);
+    body_bytes_read_ += to_copy;
+    body_buffer_.erase(0, to_copy);
 
     return to_copy;
 }
@@ -59,7 +70,7 @@ static bool is_valid_request_line(const std::vector<std::string>& v)
     if (v[1].empty() || v[1][0] != '/')
         return false;
 
-    if (v[2] != "HTTP/1.0" && v[2] != "HTTP/1.1")
+    if (http_version_from_string(v[2]) == kHttpVersionUnknown)
         return false;
 
     return true;
@@ -68,77 +79,102 @@ static bool is_valid_request_line(const std::vector<std::string>& v)
 // Format: METHOD SP REQUEST-URI SP HTTP-VERSION CRLF
 void HttpParser::parse_request_line()
 {
-    if (status_ != kIncomplete)
+    if (state_ != kParsingRequestLine)
         return;
 
-    size_t crlf = buffer_.find("\r\n");
+    size_t crlf = raw_buffer_.find("\r\n");
     if (crlf == std::string::npos)
         return;
 
-    std::string line = buffer_.substr(0, crlf);
-    std::vector<std::string> v = str_split(line, " ");
+    std::string request_line = raw_buffer_.substr(0, crlf);
+    std::vector<std::string> v = str_split(request_line, " ");
 
     if (!is_valid_request_line(v)) {
-        status_ = kError;
+        state_ = kParsingError;
         return;
     }
 
     req_.method = v[0];
     req_.path = v[1];
-    req_.http_version = v[2];
+    req_.http_version = http_version_from_string(v[2]);
 
-    buffer_.erase(0, crlf + 2);
+    req_.keep_alive = (req_.http_version == kHttpVersion1_1) ? true : false;
 
-    status_ = kRequestLineDone;
+    raw_buffer_.erase(0, crlf + 2);
+    state_ = kParsingHeaders;
 }
 
 // Need to parse: content_length, is_chunked?, keep_alive?
 void HttpParser::parse_headers()
 {
-    if (status_ != kRequestLineDone)
+    if (state_ != kParsingHeaders)
         return;
 
-    size_t pos = buffer_.find("\r\n\r\n");
-    if (pos == std::string::npos)
+    size_t end = raw_buffer_.find("\r\n\r\n");
+
+    if (end == std::string::npos)
         return;
 
-    std::vector<std::string> v = str_split(buffer_, "\r\n");
+    std::string header_block = raw_buffer_.substr(0, end);
+    std::vector<std::string> v = str_split(header_block, "\r\n");
 
     for (size_t i = 0; i < v.size() && !v[i].empty(); i++) {
 
-        size_t colon = v[i].find(':');
-        if (colon == std::string::npos) {
-            status_ = kError;
+        size_t first_colon = v[i].find(':');
+        if (first_colon == std::string::npos) {
+            state_ = kParsingError;
             return;
         }
 
-        std::string name = v[i].substr(0, colon);
-        std::string value = str_trim(v[i].substr(colon + 1));
+        std::string name = v[i].substr(0, first_colon);
+        std::string value = str_trim(v[i].substr(first_colon + 1));
 
         if (name == "Content-Length") {
-            // This is terrible but it will do the job for now
+            // atoi is terrible but it will do the job for now
             req_.content_length = std::atoi(value.c_str());
         }
         else if (name == "Transfer-Encoding" && value == "chunked") {
+            LOG(WARN) << "Chunked transfer not implemented yet!";
             req_.is_chunked = true;
         }
-        else if (name == "Connection" && value == "keep-alive") {
-            req_.keep_alive = true;
+        else if (name == "Connection") {
+            if (value == "keep-alive") {
+                req_.keep_alive = true;
+            }
+            else if (value == "close") {
+                req_.keep_alive = false;
+            }
         }
         else {
+            // Should probably ignore all these useless headers
             req_.headers[name] = value;
         }
     }
-
-    buffer_.erase(0, pos + 4);
-    status_ = kHeadersDone;
+    raw_buffer_.erase(0, end + 4);
+    state_ = kParsingBody;
 }
 
 void HttpParser::parse_body()
 {
-    if (status_ != kHeadersDone)
+    if (state_ != kParsingBody)
         return;
 
-    if (req_.content_length == 0)
-        status_ = kBodyDone;
+    // No body to parse
+    if (req_.content_length == 0) {
+        state_ = kParsingDone;
+        return;
+    }
+
+    assert(body_bytes_parsed_ < req_.content_length);
+
+    size_t bytes_left = req_.content_length - body_bytes_parsed_;
+    size_t to_copy = std::min(bytes_left, raw_buffer_.size());
+
+    body_buffer_.append(raw_buffer_.data(), to_copy);
+    raw_buffer_.erase(0, to_copy);
+
+    body_bytes_parsed_ += to_copy;
+
+    if (body_bytes_parsed_ == req_.content_length)
+        state_ = kParsingDone;
 }

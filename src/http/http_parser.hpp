@@ -7,14 +7,21 @@
 
 class HttpParser {
 public:
+    enum State {
+        kParsingError = 0,
+        kParsingRequestLine,
+        kParsingHeaders,
+        kParsingBody,
+        kParsingDone
+    };
+
     HttpParser();
 
-    enum Status { kError = 0, kIncomplete, kRequestLineDone, kHeadersDone, kBodyDone };
+    void append_data(const char* src, size_t n);
+    size_t read_body_chunk(char* dest, size_t n);
+    void reset_for_next_request();
 
-    void feed_data(const char* buf, size_t n);
-    size_t slurp_data(char* buf, size_t n);
-
-    Status status() { return status_; }
+    HttpParser::State state() { return state_; }
     const HttpRequest& request() { return req_; }
 
 private:
@@ -22,9 +29,11 @@ private:
     void parse_headers();
     void parse_body();
 
-    Status status_;
-    std::string buffer_;
-    size_t bytes_slurped_;
+    HttpParser::State state_;
+    std::string raw_buffer_;
+    std::string body_buffer_;
+    size_t body_bytes_parsed_;
+    size_t body_bytes_read_;
     HttpRequest req_;
 };
 

@@ -27,6 +27,8 @@ private:
 
     void accept_connection();
     void handle_events(Client& conn, uint32_t events);
+    void read_from_socket(Client& conn);
+    void write_to_socket(Client& conn);
 
     uint64_t add_connection(int client_fd, const sockaddr_in& addr);
     void close_connection(Client& conn);

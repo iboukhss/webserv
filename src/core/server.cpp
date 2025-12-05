@@ -183,89 +183,135 @@ static void print_raw_data(const char* s, size_t n)
     std::cout.flush();
 }
 
+static void log_request_info(uint64_t client_id, const HttpRequest& request)
+{
+    LOG(INFO) << "Client #" << client_id << ": " << request.method << " " << request.path << " "
+              << request.http_version;
+}
+
+void Server::read_from_socket(Client& conn)
+{
+    if (conn.state() != Client::kReceivingHeaders && conn.state() != Client::kReceivingBody)
+        return;
+
+    char tmp[4096];
+    ssize_t bytes_received = recv(conn.fd(), tmp, sizeof(tmp), 0);
+
+    if (bytes_received == 0) {
+        LOG(INFO) << "Client #" << conn.id() << ": connection closed by remote client";
+        conn.set_state(Client::kClosingConnection);
+        return;
+    }
+
+    HttpParser& parser = conn.parser();
+    parser.append_data(tmp, bytes_received);
+    print_raw_data(tmp, bytes_received);
+
+    if (conn.state() == Client::kReceivingHeaders) {
+
+        if (parser.state() == HttpParser::kParsingError) {
+            LOG(ERROR) << "Client #" << conn.id() << ": invalid HTTP request";
+            conn.set_state(Client::kClosingConnection);
+            return;
+        }
+
+        if (parser.state() < HttpParser::kParsingBody) {
+            return;
+        }
+        // We parsed headers and might have some or all body bytes?
+        log_request_info(conn.id(), parser.request());
+        conn.set_handler(router_.handle_request(parser.request()));
+
+        if (conn.handler()->needs_input()) {
+            conn.set_state(Client::kReceivingBody);
+        }
+        else {
+            conn.set_state(Client::kSendingResponse);
+        }
+    }
+
+    if (conn.state() == Client::kReceivingBody) {
+        size_t n = 0;
+        while ((n = parser.read_body_chunk(tmp, sizeof(tmp))) > 0) {
+            conn.handler()->write_data(tmp, n);
+        }
+        if (conn.handler()->has_output()) {
+            conn.set_state(Client::kSendingResponse);
+        }
+    }
+}
+
+void Server::write_to_socket(Client& conn)
+{
+    assert(conn.handler() && "Handler must exist when writing to socket");
+
+    if (conn.state() != Client::kSendingResponse)
+        return;
+
+    char tmp[4096];
+    Handler& handler = *conn.handler();
+    std::string& send_buffer = conn.send_buffer();
+
+    if (handler.has_output()) {
+        size_t n = handler.read_data(tmp, sizeof(tmp));
+        send_buffer.append(tmp, n);
+    }
+    if (!send_buffer.empty()) {
+        size_t bytes_sent = send(conn.fd(), send_buffer.data(), send_buffer.size(), 0);
+        if (bytes_sent == 0) {
+            LOG(WARN) << "Client #" << conn.id() << ": failed to send any bytes!";
+        }
+        else {
+            send_buffer.erase(0, bytes_sent);
+        }
+    }
+
+    // All data has been written to socket -> either close or keep going
+    if (handler.is_done() && send_buffer.empty()) {
+        LOG(DEBUG) << "Client #" << conn.id() << ": response sent";
+
+        if (conn.keep_alive()) {
+            conn.parser().reset_for_next_request();
+            delete conn.handler();
+            conn.set_handler(NULL);
+            conn.set_state(Client::kReceivingHeaders);
+        }
+        else {
+            conn.set_state(Client::kClosingConnection);
+        }
+    }
+}
+
 void Server::handle_events(Client& conn, uint32_t events)
 {
-    char tmp[4096];
-    uint64_t client_id = conn.id();
-    HttpParser& parser = conn.parser();
-    uint32_t next_events = 0;
-
-    // Can read from socket
     if (events & EPOLLIN) {
-
-        size_t bytes_received = recv(conn.fd(), tmp, sizeof(tmp), 0);
-
-        if (bytes_received == 0) {
-            LOG(INFO) << "Client #" << client_id << ": connection closed by remote client";
-            close_connection(conn);
-            return;
-        }
-
-        LOG(DEBUG) << "Client #" << client_id << ": " << bytes_received << " bytes received";
-        print_raw_data(tmp, bytes_received);
-
-        // Feed data to the parser
-        parser.feed_data(tmp, bytes_received);
-
-        if (parser.status() == HttpParser::kError) {
-            LOG(ERROR) << "Client #" << client_id << ": invalid HTTP request";
-            close_connection(conn);
-            return;
-        }
-
-        if (!conn.handler() && parser.status() >= HttpParser::kHeadersDone) {
-            HttpRequest req = parser.request();
-            LOG(INFO) << "Client #" << client_id << ": " << req.method << " " << req.path << " "
-                      << req.http_version;
-
-            Handler* h = router_.handle_request(req);
-            conn.set_handler(h);
-        }
-        if (conn.handler()) {
-            if (conn.handler()->needs_input()) {
-                size_t n = parser.slurp_data(tmp, sizeof(tmp));
-                (void) conn.handler()->write_data(tmp, n);
-            }
-        }
+        read_from_socket(conn);
     }
-
-    // Can write to socket
     if (events & EPOLLOUT) {
-        if (conn.handler()) {
-
-            Handler& handler = *conn.handler();
-            std::string& send_buffer = conn.send_buffer();
-
-            if (handler.has_output()) {
-                size_t n = handler.read_data(tmp, sizeof(tmp));
-                send_buffer.append(tmp, n);
-            }
-            if (!send_buffer.empty()) {
-                size_t bytes_sent = send(conn.fd(), send_buffer.data(), send_buffer.size(), 0);
-                if (bytes_sent == 0) {
-                    LOG(WARN) << "Client #" << client_id << ": failed to send any bytes!";
-                }
-                else {
-                    send_buffer.erase(0, bytes_sent);
-                }
-            }
-            // Treat all connections as HTTP/1.0 for now (do not keep-alive)
-            if (send_buffer.empty() && handler.is_done()) {
-                LOG(DEBUG) << "Client #" << client_id << ": response sent";
-                close_connection(conn);
-                return;
-            }
-        }
+        write_to_socket(conn);
     }
 
-    // Update next event subscription
-    if (!conn.handler() || conn.handler()->needs_input())
-        next_events |= EPOLLIN;
-    if (conn.handler() && (conn.handler()->has_output() || !conn.send_buffer().empty()))
-        next_events |= EPOLLOUT;
+    if (conn.state() == Client::kClosingConnection) {
+        close_connection(conn);
+        return;
+    }
 
     epoll_event ev;
-    ev.data.u64 = client_id;
-    ev.events = next_events;
+    ev.data.u64 = conn.id();
+
+    if (conn.state() == Client::kReceivingHeaders) {
+        ev.events = EPOLLIN;
+        epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, conn.fd(), &ev);
+        return;
+    }
+
+    uint32_t event_mask = 0;
+
+    if (conn.handler()->needs_input())
+        event_mask |= EPOLLIN;
+    if (conn.handler()->has_output() || !conn.send_buffer().empty())
+        event_mask |= EPOLLOUT;
+
+    ev.events = event_mask;
     epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, conn.fd(), &ev);
 }
