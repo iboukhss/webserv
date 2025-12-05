@@ -11,6 +11,7 @@ public:
     enum Status {
         kStatusOk = 200,
         kStatusCreated = 201,
+        kStatusNoContent = 204,
         kStatusBadRequest = 400,
         kStatusForbidden = 403,
         kStatusNotFound = 404,

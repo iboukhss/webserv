@@ -18,6 +18,7 @@ const char* HttpResponse::reason_phrase(HttpResponse::Status code) const
     switch (code) {
     case kStatusOk:                  return "OK";
     case kStatusCreated:             return "File Created";
+    case kStatusNoContent:           return "No Content";
     case kStatusBadRequest:          return "Bad Request";
     case kStatusForbidden:           return "Forbidden";
     case kStatusNotFound:            return "Not Found";
