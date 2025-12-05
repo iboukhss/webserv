@@ -68,6 +68,7 @@ deps = $(objs:.o=.d)
 
 # Test sources (keep in alphabetical order)
 test_srcs = \
+  tests/delete_handler_unittest.cpp \
   tests/upload_handler_unittest.cpp \
   tests/error_handler_unittest.cpp \
   tests/http_parser_unittest.cpp \
