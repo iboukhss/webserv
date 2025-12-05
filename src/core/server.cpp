@@ -119,7 +119,7 @@ void Server::accept_connection()
     uint64_t client_id = add_connection(client_fd, addr);
 
     epoll_event ev;
-    ev.events = EPOLLIN;
+    ev.events = EPOLLRDHUP | EPOLLIN;
     ev.data.u64 = client_id;
     epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, client_fd, &ev);
 
@@ -284,13 +284,17 @@ void Server::write_to_socket(Client& conn)
 
 void Server::handle_events(Client& conn, uint32_t events)
 {
+    if (events & EPOLLRDHUP) {
+        LOG(ERROR) << "Client #" << conn.id() << ": EPOLLRDHUP - peer closed connection";
+        close_connection(conn);
+        return;
+    }
     if (events & EPOLLIN) {
         read_from_socket(conn);
     }
     if (events & EPOLLOUT) {
         write_to_socket(conn);
     }
-
     if (conn.state() == Client::kClosingConnection) {
         close_connection(conn);
         return;
@@ -299,13 +303,14 @@ void Server::handle_events(Client& conn, uint32_t events)
     epoll_event ev;
     ev.data.u64 = conn.id();
 
+    uint32_t event_mask = EPOLLRDHUP;
+
     if (conn.state() == Client::kReceivingHeaders) {
-        ev.events = EPOLLIN;
+        event_mask |= EPOLLIN;
+        ev.events = event_mask;
         epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, conn.fd(), &ev);
         return;
     }
-
-    uint32_t event_mask = 0;
 
     if (conn.handler()->needs_input())
         event_mask |= EPOLLIN;
