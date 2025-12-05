@@ -1,6 +1,7 @@
 #include "router/router.hpp"
 
 #include "config/server_config.hpp"
+#include "handler/delete_handler.hpp"
 #include "handler/error_handler.hpp"
 #include "handler/static_file_handler.hpp"
 #include "handler/upload_handler.hpp"
@@ -126,8 +127,9 @@ Handler* Router::handle_request(const HttpRequest& request)
     if (request.method == "POST") {
         return new UploadHandler(full_path, request.content_length);
     }
-    /*  if (request.method == "DELETE") {
-            return new DeleteHandler(full_path);*/
+    if (request.method == "DELETE") {
+        return new DeleteHandler(full_path);
+    }
 
     // Fallback, should never happen in theory
     std::cerr << "Something terrible happened in the router" << std::endl;
