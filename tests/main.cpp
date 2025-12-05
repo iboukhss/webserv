@@ -9,6 +9,6 @@ UTEST_STATE();
 int main(int argc, char** argv)
 {
     // Make test output quieter
-    LogMessage::g_log_level = LogMessage::kLevelError;
+    LogMessage::g_log_level = LogMessage::kLevelFatal;
     return utest_main(argc, argv);
 }

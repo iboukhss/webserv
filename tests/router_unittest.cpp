@@ -26,8 +26,6 @@ UTEST(RouterTest, GET)
 
 UTEST(RouterTest, POST)
 {
-    UTEST_SKIP("Feature to be implemented");
-
     ServerConfig config = make_site1_config();
 
     HttpRequest req;
@@ -43,9 +41,6 @@ UTEST(RouterTest, POST)
 
 UTEST(RouterTest, DELETE)
 {
-
-    UTEST_SKIP("Feature to be implemented");
-
     ServerConfig config = make_site1_config();
 
     HttpRequest req;
@@ -75,7 +70,7 @@ UTEST(RouterTest, IncorrectMethod)
 
 UTEST(RouterTest, EmptyPathReturnsHandler)
 {
-    UTEST_SKIP("To do: Map empty request path to root");
+    // UTEST_SKIP("To do: Map empty request path to root");
     ServerConfig config = make_site1_config();
 
     HttpRequest req;
