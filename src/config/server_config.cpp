@@ -118,3 +118,34 @@ ServerConfig make_python_docs_config()
 
     return server_cfg;
 }
+
+// Ref:
+// https://vitepress.dev/guide/deploy#nginx
+
+ServerConfig make_vitepress_docs_config()
+{
+    SharedConfig shared_cfg;
+    shared_cfg.document_root = "www/vitepress_docs";
+    shared_cfg.allowed_methods.push_back("GET");
+    shared_cfg.allowed_methods.push_back("POST");
+    shared_cfg.allowed_methods.push_back("DELETE");
+    shared_cfg.index_files.push_back("index.html");
+    shared_cfg.error_pages[HttpResponse::kStatusNotFound] = "/404.html";
+    shared_cfg.error_pages[HttpResponse::kStatusForbidden] = "/403.html";
+    shared_cfg.max_body_size = WEBSERV_DEFAULT_MAX_BODY_SIZE;
+    shared_cfg.uploads_allowed = false;
+    shared_cfg.autoindex_enabled = false;
+
+    RouteConfig default_loc;
+    default_loc.config = shared_cfg;
+    default_loc.route_path = "/";
+
+    ServerConfig server_cfg;
+    server_cfg.config = shared_cfg;
+    server_cfg.listen_addrs.push_back(make_ipv4_addr(INADDR_ANY, WEBSERV_DEFAULT_PORT));
+    server_cfg.backlog = WEBSERV_DEFAULT_MAX_PENDING_CONNECTIONS;
+    server_cfg.is_default_server = true;
+    server_cfg.locations.push_back(default_loc);
+
+    return server_cfg;
+}

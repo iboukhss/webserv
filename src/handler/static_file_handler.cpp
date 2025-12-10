@@ -61,6 +61,8 @@ static const char* derive_file_type(const std::string& file_path)
         return "image/jpeg";
     else if (ext == "png")
         return "image/png";
+    else if (ext == "svg")
+        return "image/svg+xml";
     else if (ext == "gif")
         return "image/gif";
     else if (ext == "ico")
