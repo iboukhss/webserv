@@ -95,7 +95,17 @@ void HttpParser::parse_request_line()
     }
 
     req_.method = v[0];
-    req_.path = v[1];
+
+    size_t qpos = v[1].find("?");
+    if (qpos != std::string::npos) {
+        req_.path = v[1].substr(0, qpos);
+        req_.query_string = v[1].substr(qpos + 1);
+    }
+    else {
+        req_.path = v[1];
+        req_.query_string = "";
+    }
+
     req_.http_version = http_version_from_string(v[2]);
 
     req_.keep_alive = (req_.http_version == kHttpVersion1_1) ? true : false;
