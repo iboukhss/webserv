@@ -92,5 +92,6 @@ struct HttpConfig {
 
 ServerConfig make_site1_config();
 ServerConfig make_example_config();
+ServerConfig make_python_docs_config();
 
 #endif // CONFIG_SERVER_CONFIG_HPP_

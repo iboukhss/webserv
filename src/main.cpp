@@ -10,7 +10,7 @@ int main(void)
     setup_signal_handlers();
 
     try {
-        ServerConfig config = make_example_config();
+        ServerConfig config = make_python_docs_config();
         Server server(config);
 
         server.init();
