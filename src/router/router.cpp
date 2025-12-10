@@ -15,114 +15,127 @@
 #include <string>
 
 Router::Router(const ServerConfig& config)
-    : config_(config)
+    : rc(config)
 {
 }
 
-// Function has been updated to not do a char by char comparision
-int Router::prefix_length(const std::string& req_location, const std::string& location)
+// Returns the length of the matching prefix between request_path and route_path
+static size_t prefix_length(const std::string& request_path, const std::string& route_path)
 {
-    if (location == "/")
+    if (route_path == "/")
         return 1;
-    if (req_location.empty())
+
+    if (request_path.size() < route_path.size())
         return 0;
-    if (req_location.size() < location.size())
+
+    if (request_path.compare(0, route_path.size(), route_path) != 0)
         return 0;
-    if (req_location.compare(0, location.size(), location) != 0)
-        return 0;
-    if (req_location.size() == location.size())
-        return location.size();
-    if (req_location.size() > location.size() && req_location[location.size()] == '/')
-        return location.size();
+
+    if (request_path.size() == route_path.size())
+        return route_path.size();
+
+    if (request_path[route_path.size()] == '/')
+        return route_path.size();
+
     return 0;
 }
 
 // for the moment it takes some static input
-const Location* Router::routing(const std::string& req_location)
+const RouteConfig& Router::find_best_route(const std::string& request_path)
 {
-    int longest_match = 0;
-    const Location* best_match = NULL;
-    // iterrate through locations to find longest match
-    for (size_t i = 0; i < config_.locations.size(); ++i) {
-        int len_match = prefix_length(req_location, config_.locations[i].path);
-        if (len_match > longest_match) {
-            longest_match = len_match;
-            best_match = &config_.locations[i];
+    assert(!rc.locations.empty() && "There must always be at least one default location");
+    assert(rc.locations[0].route_path == "/" && "Default route path is not '/'");
+
+    size_t best_route_idx = 0;
+    size_t best_route_len = 1;
+
+    for (size_t i = 0; i < rc.locations.size(); ++i) {
+        size_t match_len = prefix_length(request_path, rc.locations[i].route_path);
+        if (match_len > best_route_len) {
+            best_route_len = match_len;
+            best_route_idx = i;
         }
     }
-    return (best_match ? best_match : &(config_.default_location));
+    return rc.locations[best_route_idx];
 }
 
-bool Router::is_valid_method(const std::string& method)
+// NOTE: we might be missing out on proper PATH_INFO semantics here as this
+// would not be considered a match: /foo.py/bar -> .py
+// This seems to be valid in some cases but we ignore it right now.
+static bool is_cgi_request(const HttpRequest& request, const RouteConfig& route)
 {
-    for (size_t i = 0; i < config_.methods.size(); ++i) {
-        if (method == config_.methods[i])
-            return (true);
-    }
-    return (false);
+    if (route.config.cgi.extension.empty())
+        return false;
+
+    size_t dot = request.path.find_last_of(".");
+    if (dot == std::string::npos)
+        return false;
+
+    return request.path.substr(dot) == route.config.cgi.extension;
 }
 
-std::string Router::build_request_path(const HttpRequest& request, const Location* best_match)
+static bool is_allowed_cgi_method(const std::string& method, const RouteConfig& route)
 {
-    std::string root = config_.root;
-    // add trailing / to root if required
-    if (root[root.size() - 1] != '/')
-        root += '/';
-
-    std::string folder = static_cast<std::string>(best_match->path);
-    // remove leading / from folder if required
-    if (folder == "/")
-        folder.clear();
-
-    if (!folder.empty() && folder[0] == '/')
-        folder.erase(0, 1);
-
-    if (!folder.empty() && folder[folder.size() - 1] != '/')
-        folder += '/';
-
-    std::string file;
-    if (best_match->path == "/" || best_match->path.empty()) {
-        file = request.path;
+    for (size_t i = 0; i < route.config.cgi.allowed_methods.size(); i++) {
+        if (method == route.config.cgi.allowed_methods[i])
+            return true;
     }
-    else {
-        size_t prefix = best_match->path.size();
-        file = request.path.substr(prefix);
-    }
-    if (!file.empty() && file[0] == '/')
-        file.erase(0, 1);
-    std::string full_path = root;
-    if (!folder.empty())
-        full_path += folder;
-    full_path += file;
-    if (!full_path.empty() && full_path[full_path.size() - 1] == '/')
-        full_path += "index.html";
-    LOG(DEBUG) << "full_path = " << full_path;
-    return (full_path);
+    return false;
 }
 
-// Expectations:
+// 1. Checks for allowed CGI methods
+// 2. Checks if uploads allowed -> POST without body is not considered an upload
+// 3. If not CGI or upload, simply checks if the method is allowed on that route
+static bool is_allowed_method(const HttpRequest& request, const RouteConfig& route)
+{
+    if (is_cgi_request(request, route) && !is_allowed_cgi_method(request.method, route))
+        return false;
+
+    if (request.method == "POST" && request.content_length > 0 && !route.config.uploads_allowed)
+        return false;
+
+    for (size_t i = 0; i < route.config.allowed_methods.size(); ++i) {
+        if (request.method == route.config.allowed_methods[i])
+            return true;
+    }
+    return false;
+}
+
+// TODO: get rid of this? Should not be the router responsability
+static std::string build_request_path(const HttpRequest& request, const RouteConfig& best_route)
+{
+    assert(request.path[0] == '/' && "Request path must always start with a '/'");
+
+    return best_route.config.document_root + request.path;
+}
+
+// Preconditions:
 // Parser does not check allowed methods (only the syntax)
 // Parser does not allow empty URI (invalid format)
 // Parser always checks if URI starts with a / (forward slash)
+
 Handler* Router::handle_request(const HttpRequest& request)
 {
-    if (!is_valid_method(request.method)) {
-        return new ErrorHandler(
-            HttpResponse::kStatusMethodNotAllowed); // 405->should not occur as
-                                                    // checked during request parsing
+    assert(!request.path.empty() && "Request URI can never be empty in the router");
+
+    const RouteConfig& best_route = find_best_route(request.path);
+
+    if (!best_route.config.redirect.url.empty()) {
+        LOG(WARN) << "Redirections not implemented yet";
+        return new ErrorHandler(HttpResponse::kStatusNotImplemented);
     }
-    if (request.path.empty()) {
-        return new ErrorHandler(HttpResponse::kStatusBadRequest); // 400->should not occur as
-                                                                  // checked during request parsing
+    if (!is_allowed_method(request, best_route)) {
+        return new ErrorHandler(HttpResponse::kStatusMethodNotAllowed);
     }
-    const Location* longest_match = routing(request.path);
-    if (!longest_match) {
-        return new ErrorHandler(HttpResponse::kStatusNotFound); // 404->should not occur as routing
-                                                                // always returns fallback root path
+
+    std::string full_path = build_request_path(request, best_route);
+
+    if (is_cgi_request(request, best_route)) {
+        LOG(WARN) << "CGI not implemented yet";
+        return new ErrorHandler(HttpResponse::kStatusNotImplemented);
     }
-    std::string full_path = build_request_path(request, longest_match);
     if (request.method == "GET") {
-        return new StaticFileHandler(full_path, request);
+        return new StaticFileHandler(full_path, best_route, request);
     }
     if (request.method == "POST") {
         return new UploadHandler(full_path, request.content_length);
@@ -131,7 +144,6 @@ Handler* Router::handle_request(const HttpRequest& request)
         return new DeleteHandler(full_path);
     }
 
-    // Fallback, should never happen in theory
-    std::cerr << "Something terrible happened in the router" << std::endl;
-    return new ErrorHandler(HttpResponse::kStatusInternalServerError); // 500
+    LOG(WARN) << "Router could not find any match, falling back to ErrorHandler";
+    return new ErrorHandler(HttpResponse::kStatusInternalServerError); // Maybe 501 better here?
 }

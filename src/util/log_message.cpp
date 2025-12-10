@@ -41,10 +41,8 @@ LogMessage::Color LogMessage::get_color() const
     case kLevelWarning: return kColorYellow;
     case kLevelInfo:    return kColorReset;
     case kLevelDebug:   return kColorBlue;
+    default:            return kColorReset;
     }
-
-    NOTREACHED();
-    return kColorReset;
 }
 
 const char* LogMessage::level_string(LogMessage::Level level)
@@ -55,10 +53,8 @@ const char* LogMessage::level_string(LogMessage::Level level)
     case kLevelWarning: return "WARN";
     case kLevelInfo:    return "INFO";
     case kLevelDebug:   return "DEBUG";
+    default:            return "UNKNOWN";
     }
-
-    NOTREACHED();
-    return "UNKNOWN";
 }
 
 const char* LogMessage::color_string(LogMessage::Color color)
@@ -69,8 +65,6 @@ const char* LogMessage::color_string(LogMessage::Color color)
     case kColorGreen:  return "\033[32m";
     case kColorYellow: return "\033[33m";
     case kColorBlue:   return "\033[34m";
+    default:           return "";
     }
-
-    NOTREACHED();
-    return "";
 }

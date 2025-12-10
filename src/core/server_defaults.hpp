@@ -3,10 +3,10 @@
 
 #include "http/http_version.hpp"
 
-#define WEBSERV_DEFAULT_PORT          8080
-#define WEBSERV_DEFAULT_BACKLOG       128
-#define WEBSERV_DEFAULT_MAX_BODY_SIZE (1 << 20) // 1MB
+#define WEBSERV_DEFAULT_PORT                    8080
+#define WEBSERV_DEFAULT_MAX_PENDING_CONNECTIONS 128
+#define WEBSERV_DEFAULT_MAX_BODY_SIZE           (1 << 20) // 1MB
 
-#define WEBSERV_DEFAULT_HTTP_VERSION  kHttpVersion1_1
+#define WEBSERV_DEFAULT_HTTP_VERSION            kHttpVersion1_1
 
 #endif // SERVER_DEFAULTS_HPP_

@@ -2,109 +2,93 @@
 
 #include "core/server_defaults.hpp"
 
+#include <netinet/in.h>
+
+#include <cstring>
+
+static sockaddr_in make_ipv4_addr(in_addr_t ip, in_port_t port)
+{
+    sockaddr_in addr;
+    std::memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = htonl(ip);
+    return addr;
+}
+
 ServerConfig make_site1_config()
 {
-    ServerConfig cfg;
+    SharedConfig shared_cfg;
+    shared_cfg.document_root = "www/site1";
+    shared_cfg.allowed_methods.push_back("GET");
+    shared_cfg.allowed_methods.push_back("POST");
+    shared_cfg.allowed_methods.push_back("DELETE");
+    shared_cfg.index_files.push_back("index.html");
+    shared_cfg.max_body_size = WEBSERV_DEFAULT_MAX_BODY_SIZE;
+    shared_cfg.uploads_allowed = false;
+    shared_cfg.autoindex_enabled = false;
 
-    // ------------------------
-    // Server settings
-    // ------------------------
-    cfg.server_ip = INADDR_ANY;
-    cfg.listen_port = WEBSERV_DEFAULT_PORT;
-    cfg.backlog = WEBSERV_DEFAULT_BACKLOG;
-    cfg.max_body_size = WEBSERV_DEFAULT_MAX_BODY_SIZE;
+    RouteConfig default_loc;
+    default_loc.config = shared_cfg;
+    default_loc.route_path = "/";
 
-    // ------------------------
-    // Router settings
-    // ------------------------
-    cfg.server_name.push_back("test_server");
-    cfg.root = "www/site1";
-    cfg.default_server = true;
+    RouteConfig pages_loc;
+    pages_loc.config = shared_cfg;
+    pages_loc.route_path = "/pages";
 
-    // ------------------------
-    // Allowed methods
-    // ------------------------
-    cfg.methods.push_back("GET");
-    cfg.methods.push_back("POST");
-    cfg.methods.push_back("DELETE");
+    RouteConfig images_loc;
+    images_loc.config = shared_cfg;
+    images_loc.route_path = "/images";
 
-    // ------------------------
-    // Default location
-    // ------------------------
-    cfg.default_location.path = "";
-    cfg.default_location.index = "index.html";
+    RouteConfig files_loc;
+    files_loc.config = shared_cfg;
+    files_loc.route_path = "/files";
 
-    // ------------------------
-    // Upload location
-    // ------------------------
-    cfg.upload_location.path = "/upload";
-    cfg.upload_location.index = "index.html";
+    ServerConfig server_cfg;
+    server_cfg.config = shared_cfg;
+    server_cfg.listen_addrs.push_back(make_ipv4_addr(INADDR_ANY, WEBSERV_DEFAULT_PORT));
+    server_cfg.backlog = WEBSERV_DEFAULT_MAX_PENDING_CONNECTIONS;
+    server_cfg.is_default_server = true;
+    server_cfg.locations.push_back(default_loc);
+    server_cfg.locations.push_back(pages_loc);
+    server_cfg.locations.push_back(images_loc);
+    server_cfg.locations.push_back(files_loc);
 
-    // ------------------------
-    // Other locations
-    // ------------------------
-    Location loc1;
-    loc1.path = "/pages";
-    loc1.index = "index.html";
-    cfg.locations.push_back(loc1);
-
-    Location loc2;
-    loc2.path = "/images";
-    loc2.index = "index.html";
-    cfg.locations.push_back(loc2);
-
-    Location loc3;
-    loc3.path = "/files";
-    loc3.index = "index.html";
-    cfg.locations.push_back(loc3);
-
-    return cfg;
+    return server_cfg;
 }
 
 ServerConfig make_example_config()
 {
-    ServerConfig cfg;
+    SharedConfig shared_cfg;
+    shared_cfg.document_root = "www/example";
+    shared_cfg.allowed_methods.push_back("GET");
+    shared_cfg.allowed_methods.push_back("POST");
+    shared_cfg.allowed_methods.push_back("DELETE");
+    shared_cfg.index_files.push_back("index.html");
+    shared_cfg.max_body_size = WEBSERV_DEFAULT_MAX_BODY_SIZE;
+    shared_cfg.uploads_allowed = false;
+    shared_cfg.autoindex_enabled = false;
 
-    // ------------------------
-    // Server settings
-    // ------------------------
-    cfg.server_ip = INADDR_ANY;
-    cfg.listen_port = WEBSERV_DEFAULT_PORT;
-    cfg.backlog = WEBSERV_DEFAULT_BACKLOG;
-    cfg.max_body_size = WEBSERV_DEFAULT_MAX_BODY_SIZE;
+    RouteConfig default_loc;
+    default_loc.config = shared_cfg;
+    default_loc.route_path = "/";
 
-    // ------------------------
-    // Router settings
-    // ------------------------
-    cfg.server_name.push_back("test_server");
-    cfg.root = "www/example";
-    cfg.default_server = true;
+    RouteConfig loc1;
+    loc1.config = shared_cfg;
+    loc1.route_path = "/example";
 
-    // ------------------------
-    // Allowed methods
-    // ------------------------
-    cfg.methods.push_back("GET");
-    cfg.methods.push_back("POST");
-    cfg.methods.push_back("DELETE");
+    RouteConfig loc2;
+    loc2.config = shared_cfg;
+    loc2.route_path = "/example/test_subfolder";
 
-    // ------------------------
-    // Default location
-    // ------------------------
-    cfg.default_location.path = "";
-    cfg.default_location.index = "index.html";
+    ServerConfig server_cfg;
+    server_cfg.config = shared_cfg;
+    server_cfg.listen_addrs.push_back(make_ipv4_addr(INADDR_ANY, WEBSERV_DEFAULT_PORT));
+    server_cfg.backlog = WEBSERV_DEFAULT_MAX_PENDING_CONNECTIONS;
+    server_cfg.is_default_server = true;
+    server_cfg.locations.push_back(default_loc);
+    server_cfg.locations.push_back(loc1);
+    server_cfg.locations.push_back(loc2);
 
-    // ------------------------
-    // Other locations
-    // ------------------------
-    Location loc1;
-    loc1.path = "/example";
-    loc1.index = "index.html";
-    cfg.locations.push_back(loc1);
-
-    Location loc2;
-    loc1.path = "/example/test_subfolder";
-    loc1.index = "index.html";
-    cfg.locations.push_back(loc2);
-
-    return cfg;
+    return server_cfg;
 }

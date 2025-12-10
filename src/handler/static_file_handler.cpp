@@ -10,19 +10,77 @@
 #include <unistd.h>
 
 #include <cstring>
+#include <stdexcept>
+#include <vector>
 
-StaticFileHandler::StaticFileHandler(const std::string& path, const HttpRequest& saved_request)
-    : file_path_(path),
-      saved_request_(saved_request),
-      fd_(-1),
+static std::string resolve_path(const std::string& path,
+                                const std::vector<std::string>& index_files)
+{
+    struct stat sb;
+    std::string full_path;
+    std::string not_found = "";
+
+    // Happy case: exact match found
+    if (stat(path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode))
+        return path;
+
+    // Directory: check every index files
+    if (stat(path.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
+        for (size_t i = 0; i < index_files.size(); i++) {
+            full_path = path + "/" + index_files[i];
+            if (stat(full_path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode))
+                return full_path;
+        }
+        return not_found;
+    }
+
+    // Clean URL fallback: check /foo -> /foo.html
+    full_path = path + ".html";
+    if (stat(full_path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode))
+        return full_path;
+
+    return not_found;
+}
+
+static const char* derive_file_type(const std::string& file_path)
+{
+    size_t pos = file_path.rfind(".");
+    if (pos == std::string::npos)
+        return ("application/octet-stream");
+
+    std::string ext = file_path.substr(pos + 1);
+    if (ext == "html" || ext == "htm")
+        return "text/html; charset=UTF-8";
+    else if (ext == "txt")
+        return "text/plain; charset=UTF-8";
+    else if (ext == "css")
+        return "text/css";
+    else if (ext == "js")
+        return "application/javascript";
+    else if (ext == "jpg" || ext == "jpeg")
+        return "image/jpeg";
+    else if (ext == "png")
+        return "image/png";
+    else if (ext == "gif")
+        return "image/gif";
+    else if (ext == "ico")
+        return "image/x-icon";
+    else
+        return "application/octet-stream";
+}
+
+StaticFileHandler::StaticFileHandler(const std::string& path,
+                                     const RouteConfig& rc,
+                                     const HttpRequest& saved_request)
+    : fd_(-1),
       file_size_(0),
       eof_reached_(false),
       headers_off_(0)
 {
-    struct stat file_stat;
-    HttpResponse res(saved_request_.http_version);
+    HttpResponse res(saved_request.http_version);
+    std::string full_path = resolve_path(path, rc.config.index_files);
 
-    if (stat(path.c_str(), &file_stat) != 0 || !S_ISREG(file_stat.st_mode)) {
+    if (full_path.empty()) {
         LOG(ERROR) << "Couldn't open file " << path;
         res.code = HttpResponse::kStatusNotFound;
         res.content_type = "text/html; charset=UTF-8"; // Magic to display emojis
@@ -31,17 +89,14 @@ StaticFileHandler::StaticFileHandler(const std::string& path, const HttpRequest&
         return;
     }
 
-    fd_ = open(path.c_str(), O_RDONLY);
-    if (fd_ == -1) {
-        res.code = HttpResponse::kStatusInternalServerError;
-        headers_ = res.to_string();
-        return;
-    }
+    struct stat file_stat;
 
+    fd_ = open(full_path.c_str(), O_RDONLY);
+    stat(full_path.c_str(), &file_stat);
     file_size_ = file_stat.st_size;
 
     res.code = HttpResponse::kStatusOk;
-    res.content_type = derive_file_type();
+    res.content_type = derive_file_type(full_path);
     res.content_length = file_size_;
     res.keep_alive = true;
 
@@ -73,7 +128,7 @@ size_t StaticFileHandler::read_data(char* buf, size_t n)
     if (has_body() && !body_sent()) {
         int body_bytes = read(fd_, buf + bytes_written, n - bytes_written);
         if (body_bytes == -1) {
-            throw UnrecoverableError("Failed to read file on disk", errno);
+            throw std::runtime_error("read failed");
         }
 
         if (body_bytes == 0) {
@@ -90,31 +145,4 @@ size_t StaticFileHandler::write_data(const char* buf, size_t n)
     (void) buf;
     (void) n;
     return 0;
-}
-
-const std::string StaticFileHandler::derive_file_type()
-{
-    size_t pos = file_path_.rfind(".");
-    if (pos == std::string::npos)
-        return ("application/octet-stream");
-
-    std::string ext = file_path_.substr(pos + 1);
-    if (ext == "html" || ext == "htm")
-        return "text/html; charset=UTF-8";
-    else if (ext == "txt")
-        return "text/plain; charset=UTF-8";
-    else if (ext == "css")
-        return "text/css";
-    else if (ext == "js")
-        return "application/javascript";
-    else if (ext == "jpg" || ext == "jpeg")
-        return "image/jpeg";
-    else if (ext == "png")
-        return "image/png";
-    else if (ext == "gif")
-        return "image/gif";
-    else if (ext == "ico")
-        return "image/x-icon";
-    else
-        return "application/octet-stream";
 }

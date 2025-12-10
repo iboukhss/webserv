@@ -1,3 +1,6 @@
+---
+Language: Cpp
+Standard: Cpp03
 BasedOnStyle: LLVM
 IndentWidth: 4
 UseTab: Never
@@ -23,6 +26,10 @@ AlignConsecutiveShortCaseStatements:
 # Fails on ubuntu-latest
 #AlignEscapedNewlines: LeftWithLastLine
 
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 1
+
 AlignEscapedNewlines: DontAlign
 AlignConsecutiveMacros:
   Enabled: true
@@ -44,3 +51,4 @@ IncludeCategories:
   # C++ standard headers
   - Regex: '^<.*>$'
     Priority: 3
+...

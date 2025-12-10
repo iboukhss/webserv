@@ -1,3 +1,4 @@
+#include "config/server_config.hpp"
 #include "handler/static_file_handler.hpp"
 #include "http/http_version.hpp"
 #include "utest/utest.h"
@@ -15,8 +16,9 @@ static bool str_contains(const std::string& haystack, const std::string& needle)
 
 UTEST(StaticFileHandlerTest, StatusOk)
 {
+    RouteConfig dummy_config;
     HttpRequest dummy_request(kHttpVersion1_0);
-    StaticFileHandler test("www/example/index.html", dummy_request);
+    StaticFileHandler test("www/example/index.html", dummy_config, dummy_request);
 
     char buf[4096] = {0};
     size_t n = test.read_data(buf, sizeof(buf));
@@ -30,8 +32,9 @@ UTEST(StaticFileHandlerTest, StatusOk)
 
 UTEST(StaticFileHandlerTest, StatusNotFound)
 {
+    RouteConfig dummy_config;
     HttpRequest dummy_request(kHttpVersion1_0);
-    StaticFileHandler test("www/example/inexistant.html", dummy_request);
+    StaticFileHandler test("www/example/inexistant.html", dummy_config, dummy_request);
 
     char buf[4096] = {0};
     size_t n = test.read_data(buf, sizeof(buf));
@@ -42,8 +45,9 @@ UTEST(StaticFileHandlerTest, StatusNotFound)
 
 UTEST(StaticFileHandlerTest, ReadSomeData)
 {
+    RouteConfig dummy_config;
     HttpRequest dummy_request;
-    StaticFileHandler test("", dummy_request);
+    StaticFileHandler test("", dummy_config, dummy_request);
 
     char buf[4096] = {0};
 
@@ -54,8 +58,9 @@ UTEST(StaticFileHandlerTest, ReadSomeData)
 
 UTEST(StaticFileHandlerTest, WriteNoData)
 {
+    RouteConfig dummy_config;
     HttpRequest dummy_request;
-    StaticFileHandler test("", dummy_request);
+    StaticFileHandler test("", dummy_config, dummy_request);
     char msg[] = "Hello, world!\n";
 
     EXPECT_TRUE(test.has_output());
@@ -65,8 +70,9 @@ UTEST(StaticFileHandlerTest, WriteNoData)
 
 UTEST(StaticFileHandlerTest, SmallBuffer)
 {
+    RouteConfig dummy_config;
     HttpRequest dummy_request(kHttpVersion1_0);
-    StaticFileHandler test("www/example/index.html", dummy_request);
+    StaticFileHandler test("www/example/index.html", dummy_config, dummy_request);
 
     char buf[1] = {0};
     std::string response;

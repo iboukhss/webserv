@@ -14,7 +14,7 @@ class Client {
 public:
     enum State { kClosingConnection = 0, kReceivingHeaders, kReceivingBody, kSendingResponse };
 
-    Client(uint64_t id, int fd, const sockaddr_in& addr);
+    explicit Client(int fd);
     ~Client();
 
     // setters
@@ -24,10 +24,8 @@ public:
 
     // getters
     Client::State state() { return state_; }
-    uint64_t id() const { return id_; }
     int fd() const { return fd_; }
     bool keep_alive() { return parser_.request().keep_alive; }
-    const sockaddr_in& addr() const { return addr_; }
     std::string& send_buffer() { return send_buffer_; }
     HttpParser& parser() { return parser_; }
     Handler* handler() const { return handler_; }

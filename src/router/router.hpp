@@ -10,21 +10,11 @@
 class Router {
 public:
     explicit Router(const ServerConfig& config);
-    ~Router() {}
 
     Handler* handle_request(const HttpRequest& request);
+    const RouteConfig& find_best_route(const std::string& request_path);
 
-private:
-    Router();
-    Router(const Router&);
-    Router& operator=(const Router&);
-
-    int prefix_length(const std::string& req_location, const std::string& location);
-    const Location* routing(const std::string& req_location);
-    bool is_valid_method(const std::string& method);
-    std::string build_request_path(const HttpRequest& request, const Location* best_match);
-
-    const ServerConfig config_;
+    const ServerConfig rc;
 };
 
-#endif // ROUTER_ROUTER_INTERNAL_HPP_
+#endif // ROUTER_ROUTER_HPP_

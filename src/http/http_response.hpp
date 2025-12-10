@@ -9,6 +9,7 @@
 struct HttpResponse {
 public:
     enum Status {
+        kStatusNone = 0, // Sentinel value for initialization, never sent
         kStatusOk = 200,
         kStatusCreated = 201,
         kStatusNoContent = 204,

@@ -1,6 +1,7 @@
 #ifndef HANDLER_GET_HANDLER_HPP_
 #define HANDLER_GET_HANDLER_HPP_
 
+#include "config/server_config.hpp"
 #include "handler/handler.hpp"
 #include "http/http_request.hpp"
 
@@ -10,7 +11,10 @@
 
 class StaticFileHandler : public Handler {
 public:
-    StaticFileHandler(const std::string& path, const HttpRequest& request);
+    StaticFileHandler(const std::string& path,
+                      const RouteConfig& rc,
+                      const HttpRequest& saved_request);
+
     virtual ~StaticFileHandler();
 
     virtual size_t read_data(char* buf, size_t n);
@@ -19,7 +23,6 @@ public:
     virtual bool has_output() const { return !headers_sent() || (has_body() && !body_sent()); }
     virtual bool needs_input() const { return false; };
     virtual bool is_done() const { return !has_output(); }
-    const std::string& path() const { return file_path_; }
 
 private:
     StaticFileHandler(const StaticFileHandler&);
@@ -29,11 +32,6 @@ private:
     bool headers_sent() const { return headers_off_ == headers_.size(); }
     bool body_sent() const { return eof_reached_; }
 
-    const std::string derive_file_type();
-
-    const std::string file_path_;
-
-    const HttpRequest& saved_request_;
     int fd_;
     off_t file_size_;
     bool eof_reached_;

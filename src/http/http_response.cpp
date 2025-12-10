@@ -27,6 +27,7 @@ const char* HttpResponse::reason_phrase(HttpResponse::Status code) const
     case kStatusInternalServerError: return "Internal Server Error";
     case kStatusNotImplemented:      return "Not Implemented";
     case kStatusDiskFull:            return "Disk Full";
+    default:                         return "Unknown";
     }
 }
 

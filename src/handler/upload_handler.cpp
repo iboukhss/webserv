@@ -90,7 +90,7 @@ size_t UploadHandler::write_data(const char* buf, size_t n)
             res.code = HttpResponse::kStatusDiskFull;
             res.inline_body = "<h1> 507 Disk Full </h1>"; // to display a message during testing
             headers_ = res.to_string();
-            bytes_written_ = content_length_; // to ensure needs_input returns false
+            bytes_written_ = content_length_;             // to ensure needs_input returns false
         }
         return 0;
     }
