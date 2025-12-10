@@ -14,6 +14,20 @@ UTEST(HttpParserTest, BasicRequestLine)
     EXPECT_TRUE(p.request().http_version == kHttpVersion1_0);
 }
 
+UTEST(HttpParserTest, RequestWithQueryString)
+{
+    HttpParser p;
+    std::string req = "GET /search.php?q=foo&user=bar HTTP/1.0\r\n";
+
+    p.append_data(req.data(), req.size());
+    ASSERT_TRUE(p.state() == HttpParser::kParsingHeaders);
+
+    EXPECT_TRUE(p.request().method == "GET");
+    EXPECT_TRUE(p.request().path == "/search.php");
+    EXPECT_TRUE(p.request().query_string == "q=foo&user=bar");
+    EXPECT_TRUE(p.request().http_version == kHttpVersion1_0);
+}
+
 UTEST(HttpParserTest, FullRequestZeroBody)
 {
     HttpParser p;

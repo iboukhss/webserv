@@ -12,6 +12,7 @@ struct HttpRequest {
 
     std::string method;
     std::string path;
+    std::string query_string;
     HttpVersion http_version;
 
     // Try to keep feature parity with HttpResponse if applicable here.
