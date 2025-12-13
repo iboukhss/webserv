@@ -134,8 +134,7 @@ Handler* Router::handle_request(const HttpRequest& request)
     std::string full_path = build_request_path(request, best_route);
 
     if (is_cgi_request(request, best_route)) {
-        LOG(WARN) << "CGI not implemented yet";
-        return new ErrorHandler(HttpResponse::kStatusNotImplemented);
+        return new CgiHandler(full_path, request, best_route);
     }
     if (request.method == "GET") {
         return new StaticFileHandler(full_path, best_route, request);
