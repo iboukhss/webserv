@@ -1,6 +1,7 @@
 #include "router/router.hpp"
 
 #include "config/server_config.hpp"
+#include "handler/cgi_handler.hpp"
 #include "handler/delete_handler.hpp"
 #include "handler/error_handler.hpp"
 #include "handler/static_file_handler.hpp"
