@@ -14,7 +14,9 @@
 
 DeleteHandler::DeleteHandler(const std::string& path)
     : file_path_(path),
-      headers_off_(0)
+      headers_off_(0),
+      read_fd_(-1),
+      write_fd_(-1)
 {
     struct stat file_stat;
     HttpResponse res;
@@ -52,6 +54,14 @@ DeleteHandler::DeleteHandler(const std::string& path)
 
 DeleteHandler::~DeleteHandler()
 {
+    if (read_fd_ != -1) {
+        close(read_fd_);
+        read_fd_ = -1;
+    }
+    if (write_fd_ != -1) {
+        close(write_fd_);
+        write_fd_ = -1;
+    }
 }
 
 size_t DeleteHandler::read_data(char* buf, size_t n)

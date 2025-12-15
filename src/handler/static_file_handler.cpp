@@ -74,10 +74,11 @@ static const char* derive_file_type(const std::string& file_path)
 StaticFileHandler::StaticFileHandler(const std::string& path,
                                      const RouteConfig& rc,
                                      const HttpRequest& saved_request)
-    : fd_(-1),
-      file_size_(0),
+    : file_size_(0),
       eof_reached_(false),
-      headers_off_(0)
+      headers_off_(0),
+      read_fd_(-1),
+      write_fd_(-1)
 {
     HttpResponse res(saved_request.http_version);
     std::string full_path = resolve_path(path, rc.config.index_files);
@@ -93,7 +94,7 @@ StaticFileHandler::StaticFileHandler(const std::string& path,
 
     struct stat file_stat;
 
-    fd_ = open(full_path.c_str(), O_RDONLY);
+    read_fd_ = open(full_path.c_str(), O_RDONLY);
     stat(full_path.c_str(), &file_stat);
     file_size_ = file_stat.st_size;
 
@@ -107,8 +108,14 @@ StaticFileHandler::StaticFileHandler(const std::string& path,
 
 StaticFileHandler::~StaticFileHandler()
 {
-    if (fd_ != -1)
-        close(fd_);
+    if (read_fd_ != -1) {
+        close(read_fd_);
+        read_fd_ = -1;
+    }
+    if (write_fd_ != -1) {
+        close(write_fd_);
+        write_fd_ = -1;
+    }
 }
 
 size_t StaticFileHandler::read_data(char* buf, size_t n)
@@ -128,7 +135,7 @@ size_t StaticFileHandler::read_data(char* buf, size_t n)
         }
     }
     if (has_body() && !body_sent()) {
-        int body_bytes = read(fd_, buf + bytes_written, n - bytes_written);
+        int body_bytes = read(read_fd_, buf + bytes_written, n - bytes_written);
         if (body_bytes == -1) {
             throw std::runtime_error("read failed");
         }

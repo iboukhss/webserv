@@ -17,6 +17,9 @@ public:
 
     virtual ~StaticFileHandler();
 
+    virtual int get_read_fd() const { return read_fd_; };
+    virtual int get_write_fd() const { return write_fd_; };
+
     virtual size_t read_data(char* buf, size_t n);
     virtual size_t write_data(const char* buf, size_t n);
 
@@ -28,15 +31,17 @@ private:
     StaticFileHandler(const StaticFileHandler&);
     StaticFileHandler& operator=(const StaticFileHandler&);
 
-    bool has_body() const { return fd_ != -1; }
+    bool has_body() const { return read_fd_ != -1; }
     bool headers_sent() const { return headers_off_ == headers_.size(); }
     bool body_sent() const { return eof_reached_; }
 
-    int fd_;
     off_t file_size_;
     bool eof_reached_;
     std::string headers_;
     size_t headers_off_;
+
+    int read_fd_;
+    int write_fd_;
 };
 
 #endif
