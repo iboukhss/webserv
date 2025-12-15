@@ -2,6 +2,8 @@
 
 #include "util/log_message.hpp"
 
+#include <unistd.h>
+
 #include <cstring>
 #include <iostream>
 
@@ -23,7 +25,9 @@ size_t ErrorHandler::write_data(const char* buf, size_t n)
 }
 
 ErrorHandler::ErrorHandler(HttpResponse::Status code)
-    : res_sent_(false)
+    : res_sent_(false),
+      read_fd_(-1),
+      write_fd_(-1)
 {
     res_.code = code;
     res_.inline_body = "<h1> some error code to be shown here <h1>";
@@ -32,4 +36,12 @@ ErrorHandler::ErrorHandler(HttpResponse::Status code)
 
 ErrorHandler::~ErrorHandler()
 {
+    if (read_fd_ != -1) {
+        close(read_fd_);
+        read_fd_ = -1;
+    }
+    if (write_fd_ != -1) {
+        close(write_fd_);
+        write_fd_ = -1;
+    }
 }

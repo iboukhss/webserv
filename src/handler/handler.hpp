@@ -7,6 +7,9 @@ class Handler {
 public:
     virtual ~Handler() {}
 
+    virtual int get_read_fd() const = 0;
+    virtual int get_write_fd() const = 0;
+
     virtual size_t read_data(char* buf, size_t n) = 0;
     virtual size_t write_data(const char* buf, size_t n) = 0;
 
