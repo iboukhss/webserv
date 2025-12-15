@@ -24,6 +24,9 @@ public:
     virtual bool needs_input() const { return false; };
     virtual bool is_done() const { return !has_output(); }
 
+    virtual int cgi_read_fd() const { return -1; };
+    virtual int cgi_write_fd() const { return -1; };
+
 private:
     StaticFileHandler(const StaticFileHandler&);
     StaticFileHandler& operator=(const StaticFileHandler&);
