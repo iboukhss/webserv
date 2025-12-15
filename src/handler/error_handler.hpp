@@ -20,6 +20,9 @@ public:
 
     int error_code() { return res_.code; }
 
+    virtual int cgi_read_fd() const { return -1; };
+    virtual int cgi_write_fd() const { return -1; };
+
 private:
     ErrorHandler(const ErrorHandler&);
     ErrorHandler& operator=(const ErrorHandler&);

@@ -20,6 +20,9 @@ public:
     virtual bool is_done() const { return headers_sent(); }
     const std::string& path() const { return file_path_; }
 
+    virtual int cgi_read_fd() const { return -1; };
+    virtual int cgi_write_fd() const { return -1; };
+
 private:
     UploadHandler(const UploadHandler&);
     UploadHandler& operator=(const UploadHandler&);

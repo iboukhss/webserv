@@ -20,6 +20,9 @@ public:
     virtual bool is_done() const { return !has_output(); }
     const std::string& path() const { return file_path_; }
 
+    virtual int cgi_read_fd() const { return -1; };
+    virtual int cgi_write_fd() const { return -1; };
+
 private:
     DeleteHandler(const DeleteHandler&);
     DeleteHandler& operator=(const DeleteHandler&);
