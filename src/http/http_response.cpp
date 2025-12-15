@@ -26,6 +26,7 @@ const char* HttpResponse::reason_phrase(HttpResponse::Status code) const
     case kStatusConflict:            return "Conflict";
     case kStatusInternalServerError: return "Internal Server Error";
     case kStatusNotImplemented:      return "Not Implemented";
+    case kStatusBadGateway:          return "Bad Gateway";
     case kStatusDiskFull:            return "Disk Full";
     default:                         return "Unknown";
     }

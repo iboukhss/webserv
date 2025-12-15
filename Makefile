@@ -31,6 +31,8 @@ srcs = \
   src/core/server_defaults.hpp \
   src/core/signals.cpp \
   src/core/signals.hpp \
+  src/handler/cgi_handler.cpp \
+  src/handler/cgi_handler.hpp \
   src/handler/delete_handler.cpp \
   src/handler/delete_handler.hpp \
   src/handler/error_handler.cpp \
@@ -68,6 +70,7 @@ deps = $(objs:.o=.d)
 
 # Test sources (keep in alphabetical order)
 test_srcs = \
+  tests/cgi_handler_unittest.cpp \
   tests/delete_handler_unittest.cpp \
   tests/upload_handler_unittest.cpp \
   tests/error_handler_unittest.cpp \

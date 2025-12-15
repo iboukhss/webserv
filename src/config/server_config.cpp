@@ -75,7 +75,10 @@ ServerConfig make_example_config()
 
     RouteConfig loc1;
     loc1.config = shared_cfg;
-    loc1.route_path = "/example";
+    loc1.route_path = "/bin";
+    loc1.config.cgi.allowed_methods.push_back("GET");
+    loc1.config.cgi.allowed_methods.push_back("POST");
+    loc1.config.cgi.extension = ".py";
 
     RouteConfig loc2;
     loc2.config = shared_cfg;

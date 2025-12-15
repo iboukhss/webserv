@@ -1,6 +1,7 @@
 #include "router/router.hpp"
 
 #include "config/server_config.hpp"
+#include "handler/cgi_handler.hpp"
 #include "handler/delete_handler.hpp"
 #include "handler/error_handler.hpp"
 #include "handler/static_file_handler.hpp"
@@ -70,7 +71,6 @@ static bool is_cgi_request(const HttpRequest& request, const RouteConfig& route)
     size_t dot = request.path.find_last_of(".");
     if (dot == std::string::npos)
         return false;
-
     return request.path.substr(dot) == route.config.cgi.extension;
 }
 
@@ -131,8 +131,7 @@ Handler* Router::handle_request(const HttpRequest& request)
     std::string full_path = build_request_path(request, best_route);
 
     if (is_cgi_request(request, best_route)) {
-        LOG(WARN) << "CGI not implemented yet";
-        return new ErrorHandler(HttpResponse::kStatusNotImplemented);
+        return new CgiHandler(full_path, request, best_route);
     }
     if (request.method == "GET") {
         return new StaticFileHandler(full_path, best_route, request);

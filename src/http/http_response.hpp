@@ -20,6 +20,7 @@ public:
         kStatusConflict = 409,
         kStatusInternalServerError = 500,
         kStatusNotImplemented = 501,
+        kStatusBadGateway = 502,
         kStatusDiskFull = 507
     };
 

@@ -10,7 +10,8 @@ int main(void)
     setup_signal_handlers();
 
     try {
-        ServerConfig config = make_vitepress_docs_config();
+        ServerConfig config = make_example_config();
+        // ServerConfig config = make_vitepress_docs_config();
         Server server(config);
 
         server.init();
