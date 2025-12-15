@@ -79,6 +79,7 @@ deps = $(objs:.o=.d)
 test_srcs = \
   tests/config_tokenizer_unittest.cpp \
   tests/config_parser_unittest.cpp \
+  tests/cgi_handler_unittest.cpp \
   tests/delete_handler_unittest.cpp \
   tests/upload_handler_unittest.cpp \
   tests/error_handler_unittest.cpp \

@@ -18,20 +18,24 @@ public:
     virtual size_t read_data(char* buf, size_t n);
     virtual size_t write_data(const char* buf, size_t n);
 
-    void setEnvVar(std::vector<std::string>& child_env_var);
-    int childReaped(void);
+    void set_env_var(std::vector<std::string>& child_env_var);
+    int child_reaped(void) const;
     int parse_headers(std::string& cgi_headers, HttpResponse& res);
 
     virtual bool has_output() const;
-    virtual bool needs_input() const { return bytes_written_body_ < body_length_; };
+    virtual bool needs_input() const
+    {
+        return input_fd_[1] != -1 && bytes_written_body_ < body_length_;
+    };
     virtual bool is_done() const
     {
+        child_reaped();
         return eoo_reached_ && !needs_input() && child_reaped_ && !has_output();
     }
     const std::string& path() const { return path_; }
 
-    virtual int cgi_read_fd() const { return output_fd[0]; };
-    virtual int cgi_write_fd() const { return input_fd[1]; };
+    virtual int cgi_read_fd() const { return output_fd_[0]; };
+    virtual int cgi_write_fd() const { return input_fd_[1]; };
 
 private:
     CgiHandler(const CgiHandler&);
@@ -39,7 +43,7 @@ private:
 
     // bool has_body() const { return body_length_ > 0; }
     bool headers_sent() const { return headers_off_ == headers_.size(); }
-    bool body_written_to_STDIN() const { return eob_reached_; }
+    // bool body_written_to_STDIN() const { return eob_reached_; }
 
     const std::string path_;
 
@@ -62,15 +66,14 @@ private:
     bool headers_sent_;
     bool eob_reached_;
     bool eoo_reached_;
-    bool child_reaped_;
-    bool pipe_blocked_;
+    mutable bool child_reaped_;
 
     // pipes
-    int input_fd[2];
-    int output_fd[2];
+    int input_fd_[2];
+    int output_fd_[2];
 
     // child process pid
-    pid_t pid_;
+    mutable pid_t pid_;
 };
 
 #endif
