@@ -76,6 +76,14 @@ CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request
     input_fd[1] = -1;
     output_fd[0] = -1;
     output_fd[1] = -1;
+
+    // STEP 0 - Check that file exisst and is executable
+    struct stat sb;
+    if (stat(path.data(), &sb) == -1 || !S_ISREG(sb.st_mode) ||
+        !(sb.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) || access(path.data(), X_OK) != 0) {
+        // error
+    }
+
     // STEP 1 - Prepare key=value pair vector to be passed to child process to set env var
     std::vector<std::string> child_env_var;
     std::vector<char*> envp;
@@ -88,6 +96,7 @@ CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request
             return;
         }
     }
+
     if (pipe(output_fd) == -1) {
         // some error to be sent
         return;
@@ -100,8 +109,7 @@ CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request
         return;
     }
 
-    if (pid_ == 0) {
-        // child process - setting up pipes
+    if (pid_ == 0) { // child process - setting up pipes
         // closing the write end and replacing STDIN by the read end of the input pipe
         if (saved_request_.method == "POST") {
             close(input_fd[1]);
@@ -132,25 +140,31 @@ CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request
         // closing read end of input_fd
         if (saved_request_.method == "POST") {
             close(input_fd[0]);
+            fcntl(input_fd[1], F_SETFL, O_NONBLOCK);
         }
         // closing write end of the output_fd
         close(output_fd[1]);
-        // fcntl(output_fd[0], F_SETFL, O_NONBLOCK);
+        fcntl(output_fd[0], F_SETFL, O_NONBLOCK);
     }
 }
 
 CgiHandler::~CgiHandler()
 {
-    if (input_fd[1] != -1)
+    if (input_fd[1] != -1) {
         close(input_fd[1]);
-    if (output_fd[0] != -1)
+        input_fd[1] = -1;
+    }
+
+    if (output_fd[0] != -1) {
         close(output_fd[0]);
+        output_fd[0] = -1;
+    }
 }
 
 int CgiHandler::childReaped(void)
 {
     if (child_reaped_) {
-        LOG(DEBUG) << "child_reaped == true";
+        // LOG(DEBUG) << "child_reaped == true";
         return 1;
     }
 

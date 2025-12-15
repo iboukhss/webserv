@@ -15,6 +15,9 @@ public:
     CgiHandler(const std::string& path, const HttpRequest& request, const RouteConfig& config);
     virtual ~CgiHandler();
 
+    virtual int get_read_fd() const { return output_fd[0]; };
+    virtual int get_write_fd() const { return input_fd[1]; };
+
     virtual size_t read_data(char* buf, size_t n);
     virtual size_t write_data(const char* buf, size_t n);
 
