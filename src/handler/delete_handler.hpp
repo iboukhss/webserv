@@ -12,9 +12,6 @@ public:
     explicit DeleteHandler(const std::string& path);
     virtual ~DeleteHandler();
 
-    virtual int get_read_fd() const { return read_fd_; };
-    virtual int get_write_fd() const { return write_fd_; };
-
     virtual size_t read_data(char* buf, size_t n);
     virtual size_t write_data(const char* buf, size_t n);
 
@@ -33,9 +30,6 @@ private:
 
     std::string headers_;
     size_t headers_off_;
-
-    int read_fd_;
-    int write_fd_;
 };
 
 #endif

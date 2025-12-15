@@ -29,12 +29,11 @@ Also, the UploadHandler could handle, both POST and PUT requests
 
 UploadHandler::UploadHandler(const std::string& path, size_t content_length)
     : file_path_(path),
+      fd_(-1),
       bytes_written_(0),
       content_length_(content_length),
       eob_reached_(false),
-      headers_off_(0),
-      read_fd_(-1),
-      write_fd_(-1)
+      headers_off_(0)
 {
     struct stat file_stat;
     if (stat(path.c_str(), &file_stat) == 0 && S_ISREG(file_stat.st_mode)) {
@@ -45,8 +44,8 @@ UploadHandler::UploadHandler(const std::string& path, size_t content_length)
         headers_ = res.to_string();
         return;
     }
-    write_fd_ = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (write_fd_ == -1) {
+    fd_ = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd_ == -1) {
         HttpResponse res;
         res.code = HttpResponse::kStatusDiskFull;
         res.inline_body = "<h1> 507 Disk Full </h1>"; // to display a message during testing
@@ -57,14 +56,8 @@ UploadHandler::UploadHandler(const std::string& path, size_t content_length)
 
 UploadHandler::~UploadHandler()
 {
-    if (read_fd_ != -1) {
-        close(read_fd_);
-        read_fd_ = -1;
-    }
-    if (write_fd_ != -1) {
-        close(write_fd_);
-        write_fd_ = -1;
-    }
+    if (fd_ != -1)
+        close(fd_);
 }
 
 bool UploadHandler::needs_input() const
@@ -88,7 +81,7 @@ size_t UploadHandler::read_data(char* buf, size_t n)
 
 size_t UploadHandler::write_data(const char* buf, size_t n)
 {
-    ssize_t bytes = write(write_fd_, buf, n);
+    ssize_t bytes = write(fd_, buf, n);
     if (bytes == -1) {
         // error occured
         eob_reached_ = true;
