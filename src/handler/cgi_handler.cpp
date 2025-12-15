@@ -41,7 +41,17 @@ static std::string to_string_size_t(size_t v)
     return oss.str();
 }
 
-void CgiHandler::setEnvVar(std::vector<std::string>& child_env_var)
+std::string build_error_response(HttpResponse::Status status, std::string inline_body)
+{
+    HttpResponse res;
+    res.code = status;
+    res.content_type = "text/html; charset=UTF-8";
+    res.inline_body = inline_body;
+    std::string headers = res.to_string();
+    return (headers);
+}
+
+void CgiHandler::set_env_var(std::vector<std::string>& child_env_var)
 {
     child_env_var.push_back("REQUEST_METHOD=" + saved_request_.method);
     child_env_var.push_back("SCRIPT_FILENAME=" + saved_request_.path);
@@ -54,6 +64,7 @@ void CgiHandler::setEnvVar(std::vector<std::string>& child_env_var)
     child_env_var.push_back("SERVER_NAME=localhost"); // to be updated based on config or removed
     child_env_var.push_back("SERVER_PROTOCOL=HTTP/1.1");
     child_env_var.push_back("SERVER_PORT=" + to_string_size_t(WEBSERV_DEFAULT_PORT));
+    child_env_var.push_back("PATH=/usr/bin:/bin");
 }
 
 // constructor needs to query the request, create the env var,
@@ -68,40 +79,47 @@ CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request
       body_length_(saved_request.content_length),
       headers_parsed_(false),
       headers_sent_(false),
+      eob_reached_(false),
       eoo_reached_(false),
-      child_reaped_(false),
-      pipe_blocked_(false)
+      child_reaped_(false)
 {
-    input_fd[0] = -1;
-    input_fd[1] = -1;
-    output_fd[0] = -1;
-    output_fd[1] = -1;
+    input_fd_[0] = -1;
+    input_fd_[1] = -1;
+    output_fd_[0] = -1;
+    output_fd_[1] = -1;
 
     // STEP 0 - Check that file exisst and is executable
     struct stat sb;
-    if (stat(path.data(), &sb) == -1 || !S_ISREG(sb.st_mode) ||
-        !(sb.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) || access(path.data(), X_OK) != 0) {
-        // error
+    if (stat(path.c_str(), &sb) == -1 || !S_ISREG(sb.st_mode) ||
+        !(sb.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) || access(path.c_str(), X_OK) != 0) {
+        headers_ = build_error_response(HttpResponse::kStatusForbidden, "<h1>403 Forbidden</h1>");
+        headers_parsed_ = true;
+        headers_sent_ = false;
+        headers_off_ = 0;
+        eoo_reached_ = true;
+        child_reaped_ = true;
+        return;
     }
 
     // STEP 1 - Prepare key=value pair vector to be passed to child process to set env var
     std::vector<std::string> child_env_var;
     std::vector<char*> envp;
-    setEnvVar(child_env_var); // -> will be passed to execve( , , char *envp[])
+    set_env_var(child_env_var); // -> will be passed to execve( , , char *envp[])
 
     // STEP 2 - set up pipes
     if (saved_request_.method == "POST") {
-        if (pipe(input_fd) == -1) {
+        if (pipe(input_fd_) == -1) {
             // some error to be sent
             return;
         }
     }
 
-    if (pipe(output_fd) == -1) {
+    if (pipe(output_fd_) == -1) {
         // some error to be sent
         return;
     }
 
+    LOG(DEBUG) << "CgiHandler constructed";
     // STEP 3 - Fork child process
     pid_ = fork();
     if (pid_ == -1) {
@@ -112,14 +130,14 @@ CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request
     if (pid_ == 0) { // child process - setting up pipes
         // closing the write end and replacing STDIN by the read end of the input pipe
         if (saved_request_.method == "POST") {
-            close(input_fd[1]);
-            dup2(input_fd[0], STDIN_FILENO);
-            close(input_fd[0]); // as now duplicated to STDIN
+            close(input_fd_[1]);
+            dup2(input_fd_[0], STDIN_FILENO);
+            close(input_fd_[0]); // as now duplicated to STDIN
         }
         // closing the read end and replacing STDOUT by the write end of the output pipe
-        close(output_fd[0]);
-        dup2(output_fd[1], STDOUT_FILENO);
-        close(output_fd[1]); // as now duplicated to STDOUT
+        close(output_fd_[0]);
+        dup2(output_fd_[1], STDOUT_FILENO);
+        close(output_fd_[1]); // as now duplicated to STDOUT
 
         std::vector<char*> envp;
         envp.reserve(child_env_var.size() + 1);
@@ -140,36 +158,36 @@ CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request
         // parent process - setting up pipes
         // closing read end of input_fd
         if (saved_request_.method == "POST") {
-            close(input_fd[0]);
-            fcntl(input_fd[1], F_SETFL, O_NONBLOCK);
+            close(input_fd_[0]);
+            fcntl(input_fd_[1], F_SETFL, O_NONBLOCK);
         }
         // closing write end of the output_fd
-        close(output_fd[1]);
-        fcntl(output_fd[0], F_SETFL, O_NONBLOCK);
+        close(output_fd_[1]);
+        fcntl(output_fd_[0], F_SETFL, O_NONBLOCK);
     }
 }
 
 CgiHandler::~CgiHandler()
 {
-    if (input_fd[1] != -1) {
-        close(input_fd[1]);
-        input_fd[1] = -1;
+    if (input_fd_[1] != -1) {
+        close(input_fd_[1]);
+        input_fd_[1] = -1;
     }
 
-    if (output_fd[0] != -1) {
-        close(output_fd[0]);
-        output_fd[0] = -1;
+    if (output_fd_[0] != -1) {
+        close(output_fd_[0]);
+        output_fd_[0] = -1;
     }
 }
 
-int CgiHandler::childReaped(void)
+int CgiHandler::child_reaped(void) const
 {
     if (child_reaped_) {
-        // LOG(DEBUG) << "child_reaped == true";
+        LOG(DEBUG) << "child_reaped == true";
         return 1;
     }
 
-    int status;
+    int status = 0;
     pid_t r = waitpid(pid_, &status, WNOHANG);
     if (r == 0) {
         return 0;
@@ -184,16 +202,6 @@ int CgiHandler::childReaped(void)
         return 1;
     }
     return 0;
-}
-
-std::string build_error_response(HttpResponse::Status status, std::string inline_body)
-{
-    HttpResponse res;
-    res.code = status;
-    res.content_type = "text/html; charset=UTF-8";
-    res.inline_body = inline_body;
-    std::string headers_ = res.to_string();
-    return (headers_);
 }
 
 int CgiHandler::parse_headers(std::string& cgi_headers, HttpResponse& res)
@@ -242,9 +250,6 @@ bool CgiHandler::has_output() const
 
 size_t CgiHandler::read_data(char* buf, size_t n)
 {
-    LOG(DEBUG) << "read_data()";
-    childReaped();
-
     if (headers_parsed_ && !headers_sent_) {
         size_t remain = headers_.size() - headers_off_;
         size_t to_copy = std::min(remain, n);
@@ -274,16 +279,16 @@ size_t CgiHandler::read_data(char* buf, size_t n)
 
     char tmp[4096];
 
-    ssize_t bytes_read = read(output_fd[0], tmp, sizeof(tmp));
+    ssize_t bytes_read = read(output_fd_[0], tmp, sizeof(tmp));
     LOG(DEBUG) << "bytes_read = " << bytes_read;
     if (bytes_read == 0) {
         eoo_reached_ = true;
-        close(output_fd[0]);
-        output_fd[0] = -1;
+        close(output_fd_[0]);
+        output_fd_[0] = -1;
         return 0; // finished reading
     }
     if (bytes_read < 0) {
-        if (errno == EAGAIN || errno || EWOULDBLOCK) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
             return 0; // pipe not available for read
         }
         headers_.append(
@@ -293,7 +298,6 @@ size_t CgiHandler::read_data(char* buf, size_t n)
         headers_sent_ = false;
         headers_off_ = 0;
         eoo_reached_ = true;
-        pipe_blocked_ = false;
         return 0;
     }
 
@@ -301,13 +305,19 @@ size_t CgiHandler::read_data(char* buf, size_t n)
         raw_output_.append(tmp, bytes_read);
 
         size_t header_end = raw_output_.find("\r\n\r\n");
+        size_t sep_len = 4;
+
+        if (header_end == std::string::npos) {
+            header_end = raw_output_.find("\n\n");
+            sep_len = 2;
+        }
         if (header_end == std::string::npos) {
             // Still waiting for full CGI header block
             return 0;
         }
 
         std::string cgi_headers = raw_output_.substr(0, header_end);
-        std::string remainder = raw_output_.substr(header_end + 4);
+        std::string remainder = raw_output_.substr(header_end + sep_len);
 
         HttpResponse res;
         if (parse_headers(cgi_headers, res) != 0) {
@@ -335,12 +345,12 @@ size_t CgiHandler::read_data(char* buf, size_t n)
     return 0;
 }
 
-// We never write to this handler (read-only)
 size_t CgiHandler::write_data(const char* buf, size_t n)
 {
-    ssize_t bytes = write(input_fd[1], buf, n);
+    LOG(DEBUG) << "Attempt to write to pipe";
+    ssize_t bytes = write(input_fd_[1], buf, n);
     if (bytes < 0) {
-        if (errno == EAGAIN || errno || EWOULDBLOCK) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
             return 0; // pipe not available for write
         }
         eob_reached_ = true;
@@ -360,8 +370,8 @@ size_t CgiHandler::write_data(const char* buf, size_t n)
 
         return (bytes);
     }
-    close(input_fd[1]);
-    input_fd[1] = -1;
+    close(input_fd_[1]);
+    input_fd_[1] = -1;
     LOG(INFO) << "CgiHandler : Body fully written to STDIN";
     return (0);
 }
