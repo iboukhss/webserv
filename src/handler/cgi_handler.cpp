@@ -148,7 +148,7 @@ CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request
         envp.push_back(NULL);
 
         char* argv[2];
-        argv[0] = const_cast<char*>(saved_request_.path.c_str());
+        argv[0] = const_cast<char*>(path_.c_str());
         argv[1] = NULL;
 
         execve(argv[0], argv, envp.data());
