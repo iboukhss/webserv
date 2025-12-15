@@ -15,9 +15,6 @@ public:
     CgiHandler(const std::string& path, const HttpRequest& request, const RouteConfig& config);
     virtual ~CgiHandler();
 
-    virtual int get_read_fd() const { return output_fd[0]; };
-    virtual int get_write_fd() const { return input_fd[1]; };
-
     virtual size_t read_data(char* buf, size_t n);
     virtual size_t write_data(const char* buf, size_t n);
 
@@ -27,8 +24,14 @@ public:
 
     virtual bool has_output() const;
     virtual bool needs_input() const { return bytes_written_body_ < body_length_; };
-    virtual bool is_done() const { return !has_output(); }
+    virtual bool is_done() const
+    {
+        return eoo_reached_ && !needs_input() && child_reaped_ && !has_output();
+    }
     const std::string& path() const { return path_; }
+
+    virtual int cgi_read_fd() const { return output_fd[0]; };
+    virtual int cgi_write_fd() const { return input_fd[1]; };
 
 private:
     CgiHandler(const CgiHandler&);

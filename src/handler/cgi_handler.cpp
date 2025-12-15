@@ -134,6 +134,7 @@ CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request
         argv[1] = NULL;
 
         execve(argv[0], argv, envp.data());
+        _exit(1);
     }
     else {
         // parent process - setting up pipes
@@ -231,17 +232,11 @@ int CgiHandler::parse_headers(std::string& cgi_headers, HttpResponse& res)
 
 bool CgiHandler::has_output() const
 {
-    // Have something already buffered for socket
     if (headers_parsed_ && !headers_sent_)
         return true;
     if (output_body_off_ < output_body_.size())
         return true;
 
-    // If CGI finished (EOF) we may be done (even if empty body)
-    if (eoo_reached_)
-        return true; // allows is_done() to progress cleanly
-
-    // Otherwise: nothing buffered, not EOF => DO NOT claim output
     return false;
 }
 
@@ -288,6 +283,9 @@ size_t CgiHandler::read_data(char* buf, size_t n)
         return 0; // finished reading
     }
     if (bytes_read < 0) {
+        if (errno == EAGAIN || errno || EWOULDBLOCK) {
+            return 0; // pipe not available for read
+        }
         headers_.append(
             build_error_response(HttpResponse::kStatusBadGateway, "<h1> 502 Bad Gateway 1 <h1>"));
 
@@ -341,7 +339,10 @@ size_t CgiHandler::read_data(char* buf, size_t n)
 size_t CgiHandler::write_data(const char* buf, size_t n)
 {
     ssize_t bytes = write(input_fd[1], buf, n);
-    if (bytes == -1) {
+    if (bytes < 0) {
+        if (errno == EAGAIN || errno || EWOULDBLOCK) {
+            return 0; // pipe not available for write
+        }
         eob_reached_ = true;
         if (headers_.empty()) {
             HttpResponse res;
