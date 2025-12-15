@@ -148,10 +148,13 @@ CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request
         envp.push_back(NULL);
 
         char* argv[2];
-        argv[0] = const_cast<char*>(saved_request_.path.c_str());
+        // argv[0] = const_cast<char*>(saved_request_.path.c_str());
+        argv[0] = const_cast<char*>(path_.c_str());
+        LOG(DEBUG) << argv[0];
         argv[1] = NULL;
 
         execve(argv[0], argv, envp.data());
+        LOG(ERROR) << "execve failed";
         _exit(1);
     }
     else {
@@ -183,7 +186,7 @@ CgiHandler::~CgiHandler()
 int CgiHandler::childReaped(void) const
 {
     if (child_reaped_) {
-        LOG(DEBUG) << "child_reaped == true";
+        // LOG(DEBUG) << "child_reaped == true";
         return 1;
     }
 
@@ -234,7 +237,9 @@ int CgiHandler::parse_headers(std::string& cgi_headers, HttpResponse& res)
     }
     res.code = status_from_int(status_code);
     res.content_type = content_type;
-    LOG(DEBUG) << res.to_string();
+    res.keep_alive = false;
+    res.is_chunked = false;
+    // LOG(DEBUG) << res.to_string();
     return (0);
 }
 
@@ -250,6 +255,7 @@ bool CgiHandler::has_output() const
 
 size_t CgiHandler::read_data(char* buf, size_t n)
 {
+    // LOG(DEBUG) << "read_data()";
     if (headers_parsed_ && !headers_sent_) {
         size_t remain = headers_.size() - headers_off_;
         size_t to_copy = std::min(remain, n);
