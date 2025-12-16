@@ -80,7 +80,11 @@ StaticFileHandler::StaticFileHandler(const std::string& path,
       headers_off_(0)
 {
     HttpResponse res(saved_request.http_version);
-    std::string full_path = resolve_path(path, rc.config.index_files);
+
+    if (rc.shared.index_files.empty())
+        LOG(WARN) << "Index files are empty";
+
+    std::string full_path = resolve_path(path, rc.shared.index_files);
 
     if (full_path.empty()) {
         LOG(ERROR) << "Couldn't open file " << path;

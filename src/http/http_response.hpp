@@ -13,6 +13,8 @@ public:
         kStatusOk = 200,
         kStatusCreated = 201,
         kStatusNoContent = 204,
+        kStatusMovedPermanently = 301,
+        kStatusFound = 302,
         kStatusBadRequest = 400,
         kStatusForbidden = 403,
         kStatusNotFound = 404,
@@ -43,10 +45,10 @@ public:
     // I think this is bad design but it seems to be useful.
     std::string inline_body;
 
-    std::string to_string() const;
+    static const char* reason_phrase(HttpResponse::Status status);
+    static HttpResponse::Status parse_status(const std::string& s);
 
-private:
-    const char* reason_phrase(HttpResponse::Status code) const;
+    std::string to_string() const;
 };
 
 #endif // HTTP_HTTP_RESPONSE_HPP_

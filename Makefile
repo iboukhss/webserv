@@ -4,7 +4,7 @@ CONFIG ?= debug
 
 # Compiler settings
 CXX = clang++
-CXXFLAGS = -std=c++98 -Wall -Wextra -Werror
+CXXFLAGS = -std=c++98 -Wall -Wextra -Wshadow -Werror
 CPPFLAGS = -Isrc -Ithird_party/utest -MMD -MP
 
 # Build specific options
@@ -22,6 +22,12 @@ test_target = build/$(CONFIG)/bin/run_tests
 
 # Main sources (keep in alphabetical order)
 srcs = \
+  src/config/config_builder.cpp \
+  src/config/config_builder.hpp \
+  src/config/config_parser.cpp \
+  src/config/config_parser.hpp \
+  src/config/config_tokenizer.cpp \
+  src/config/config_tokenizer.hpp \
   src/config/server_config.cpp \
   src/config/server_config.hpp \
   src/core/client.cpp \
@@ -49,8 +55,10 @@ srcs = \
   src/http/http_response.hpp \
   src/http/http_version.cpp \
   src/http/http_version.hpp \
+  src/main.cpp \
   src/router/router.cpp \
   src/router/router.hpp \
+  src/util/itoa.cpp \
   src/util/log_message.cpp \
   src/util/log_message.hpp \
   src/util/str_split.cpp \
@@ -58,7 +66,6 @@ srcs = \
   src/util/string.hpp \
   src/util/syscall_error.cpp \
   src/util/syscall_error.hpp \
-  src/main.cpp \
 
 cpps = $(filter %.cpp,$(srcs))
 hpps = $(filter %.hpp,$(srcs))
@@ -68,12 +75,15 @@ deps = $(objs:.o=.d)
 
 # Test sources (keep in alphabetical order)
 test_srcs = \
+  tests/config_tokenizer_unittest.cpp \
+  tests/config_parser_unittest.cpp \
   tests/delete_handler_unittest.cpp \
   tests/upload_handler_unittest.cpp \
   tests/error_handler_unittest.cpp \
   tests/http_parser_unittest.cpp \
   tests/http_response_unittest.cpp \
   tests/router_unittest.cpp \
+  tests/server_config_unittest.cpp \
   tests/static_file_handler_unittest.cpp \
   tests/str_split_unittest.cpp \
   tests/main.cpp \
@@ -139,6 +149,11 @@ lint: db
 
 # Rule used by GitHub CI
 check: format lint test
+
+# Header hygiene
+PHONY += headers-check
+headers-check: db
+	clang-tidy -p=. --header-filter=src/ --checks=misc-include-cleaner $(all_cpps)
 
 -include $(all_deps)
 

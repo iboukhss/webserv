@@ -1,3 +1,4 @@
+#include "config/server_config.hpp"
 #include "handler/delete_handler.hpp"
 #include "handler/error_handler.hpp"
 #include "handler/static_file_handler.hpp"
@@ -11,80 +12,61 @@
 #include <string>
 
 // This is very brittle and horrible
-static ServerConfig make_unittest_config()
+static HttpConfig make_unittest_config()
 {
-    RouteConfig loc1, loc2, loc3, loc4;
-
-    loc1.route_path = "/";
-    loc1.config.allowed_methods.push_back("GET");
-
-    loc2.route_path = "/files";
-    loc2.config.allowed_methods.push_back("DELETE");
-
-    loc3.route_path = "/files/private";
-    loc3.config.allowed_methods.push_back("POST");
-    loc3.config.uploads_allowed = false;
-
-    loc4.route_path = "/upload";
-    loc4.config.allowed_methods.push_back("POST");
-    loc4.config.uploads_allowed = true;
-
-    ServerConfig cfg;
-
-    cfg.locations.push_back(loc1);
-    cfg.locations.push_back(loc2);
-    cfg.locations.push_back(loc3);
-    cfg.locations.push_back(loc4);
-
-    return cfg;
+    return load_http_config("tests/config/router_unittest.conf");
 }
 
 UTEST(RouterTest, MatchesDefaultRoute)
 {
-    Router router(make_unittest_config());
+    HttpConfig conf = make_unittest_config();
+    Router router(conf.servers[0].locations);
 
     std::string request_path = "/";
-    std::string result = router.find_best_route(request_path).route_path;
+    std::string result = router.find_best_route(request_path).path;
 
     ASSERT_STREQ("/", result.c_str());
 }
 
 UTEST(RouterTest, MatchesFilePrefix)
 {
-    Router router(make_unittest_config());
+    HttpConfig conf = make_unittest_config();
+    Router router(conf.servers[0].locations);
 
     std::string request_path = "/files/42.txt";
-    std::string result = router.find_best_route(request_path).route_path;
+    std::string result = router.find_best_route(request_path).path;
 
     ASSERT_STREQ("/files", result.c_str());
 }
 
 UTEST(RouterTest, NoMatchFallsBackToDefaultRoute)
 {
-    Router router(make_unittest_config());
+    HttpConfig conf = make_unittest_config();
+    Router router(conf.servers[0].locations);
 
     std::string request_path = "/unknown/42.txt";
-    std::string result = router.find_best_route(request_path).route_path;
+    std::string result = router.find_best_route(request_path).path;
 
     ASSERT_STREQ("/", result.c_str());
 }
 
 UTEST(RouterTest, MatchesDirectory)
 {
-    Router router(make_unittest_config());
+    HttpConfig conf = make_unittest_config();
+    Router router(conf.servers[0].locations);
 
     std::string request_path = "/files";
-    std::string result = router.find_best_route(request_path).route_path;
+    std::string result = router.find_best_route(request_path).path;
 
     ASSERT_STREQ("/files", result.c_str());
 }
 
 UTEST(RouterTest, MatchesDirectoryWithTrailingSlash)
 {
-    Router router(make_unittest_config());
-
+    HttpConfig conf = make_unittest_config();
+    Router router(conf.servers[0].locations);
     std::string request_path = "/files/";
-    std::string result = router.find_best_route(request_path).route_path;
+    std::string result = router.find_best_route(request_path).path;
 
     ASSERT_STREQ("/files", result.c_str());
 }
@@ -93,17 +75,19 @@ UTEST(RouterTest, MatchesDirectoryWithMutlipleLeadingSlashes)
 {
     UTEST_SKIP("TODO: IMPLEMENT THIS FEATURE");
 
-    Router router(make_unittest_config());
+    HttpConfig conf = make_unittest_config();
+    Router router(conf.servers[0].locations);
 
     std::string request_path = "///files";
-    std::string result = router.find_best_route(request_path).route_path;
+    std::string result = router.find_best_route(request_path).path;
 
     ASSERT_STREQ("/files", result.c_str());
 }
 
 UTEST(RouterTest, ReturnsStaticFileHandler)
 {
-    Router router(make_unittest_config());
+    HttpConfig conf = make_unittest_config();
+    Router router(conf.servers[0].locations);
 
     HttpRequest req;
     req.method = "GET";
@@ -116,7 +100,8 @@ UTEST(RouterTest, ReturnsStaticFileHandler)
 
 UTEST(RouterTest, ReturnsUploadHandler)
 {
-    Router router(make_unittest_config());
+    HttpConfig conf = make_unittest_config();
+    Router router(conf.servers[0].locations);
 
     HttpRequest req;
     req.method = "POST";
@@ -131,7 +116,8 @@ UTEST(RouterTest, ReturnsUploadHandler)
 
 UTEST(RouterTest, ReturnsDeleteHandler)
 {
-    Router router(make_unittest_config());
+    HttpConfig conf = make_unittest_config();
+    Router router(conf.servers[0].locations);
 
     HttpRequest req;
     req.method = "DELETE";
@@ -144,7 +130,8 @@ UTEST(RouterTest, ReturnsDeleteHandler)
 
 UTEST(RouterTest, UploadsNotAllowed)
 {
-    Router router(make_unittest_config());
+    HttpConfig conf = make_unittest_config();
+    Router router(conf.servers[0].locations);
 
     HttpRequest req;
     req.method = "POST";
@@ -159,7 +146,8 @@ UTEST(RouterTest, UploadsNotAllowed)
 
 UTEST(RouterTest, EmptyPostBypassesUploadRestriction)
 {
-    Router router(make_unittest_config());
+    HttpConfig conf = make_unittest_config();
+    Router router(conf.servers[0].locations);
 
     HttpRequest req;
     req.method = "POST";
@@ -172,7 +160,8 @@ UTEST(RouterTest, EmptyPostBypassesUploadRestriction)
 }
 UTEST(RouterTest, UnsupportedMethodReturnsErrorHandler)
 {
-    Router router(make_unittest_config());
+    HttpConfig conf = make_unittest_config();
+    Router router(conf.servers[0].locations);
 
     HttpRequest req;
     req.method = "PATCH";
@@ -183,6 +172,7 @@ UTEST(RouterTest, UnsupportedMethodReturnsErrorHandler)
     delete h;
 }
 
+/*
 UTEST(RouterTest, BuildRequestPath)
 {
     UTEST_SKIP("TODO: MOVE THIS TO A BETTER LOCATION");
@@ -192,7 +182,8 @@ UTEST(RouterTest, BuildRequestPath)
     req.method = "GET";
     req.path = "/index.html";
 
-    Router router(config);
+    HttpConfig conf = make_unittest_config();
+    Router router(conf.servers[0].locations);
 
     Handler* handler = router.handle_request(req);
 
@@ -211,7 +202,8 @@ UTEST(RouterTest, BuildRequestPath_Long)
     req.method = "GET";
     req.path = "/example/test_subfolder/test_subfolder/someFile.txt";
 
-    Router router(config);
+    HttpConfig conf = make_unittest_config();
+    Router router(conf.servers[0].locations);
 
     Handler* handler = router.handle_request(req);
     ASSERT_TRUE(handler != NULL);
@@ -223,3 +215,4 @@ UTEST(RouterTest, BuildRequestPath_Long)
 
     delete handler;
 }
+*/

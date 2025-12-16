@@ -4,7 +4,6 @@
 #include "handler/handler.hpp"
 #include "http/http_parser.hpp"
 #include "http/http_request.hpp"
-#include "http/http_response.hpp"
 
 #include <netinet/in.h>
 

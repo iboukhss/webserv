@@ -34,7 +34,7 @@ private:
     uint64_t add_connection(int client_fd, const sockaddr_in& addr);
     void close_connection(Client& conn);
 
-    const ServerConfig config_;
+    const ServerConfig& config_;
 
     int epoll_fd_;
     std::vector<int> listen_fds_;

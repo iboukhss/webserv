@@ -10,14 +10,14 @@ int main(void)
     setup_signal_handlers();
 
     try {
-        ServerConfig config = make_vitepress_docs_config();
-        Server server(config);
+        HttpConfig cfg = load_http_config("config/vitepress.conf");
 
+        Server server(cfg.servers[0]);
         server.init();
         server.run();
     }
     catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
     return 0;

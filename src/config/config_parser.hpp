@@ -1,34 +1,41 @@
-
-
-/*
-What should the task do ?
--> take a path
--> open the config file
--> parse it and feed a struct holding the data
-
-
-*/
-
 #ifndef CONFIG_CONFIG_PARSER_HPP_
 #define CONFIG_CONFIG_PARSER_HPP_
+
+#include "config/config_tokenizer.hpp"
 
 #include <string>
 #include <vector>
 
-/* routing logic :
-    - determine which server should handle the request
-    - requests without the host should be dropped
-*/
+struct AstNode {
+    std::string name;
+    std::vector<std::string> args;
+    std::vector<AstNode> children;
+    int line;
+
+    AstNode();
+};
 
 class ConfigParser {
 public:
-    ConfigParser(const std::string& file_path);
-    ~ConfigParser();
+    explicit ConfigParser(const std::vector<ConfigToken>& tokens);
+
+    std::vector<AstNode> parse_tokens();
 
 private:
-    std::vector<server_config> config;
+    const ConfigToken& peek(size_t offset = 0) const;
+    const ConfigToken& consume();
+    const ConfigToken& expect(ConfigToken::Type type);
+    bool optional(ConfigToken::Type type);
+    bool eof() const;
 
-    ConfigParser();
+    const ConfigToken& consume_word();
+
+    AstNode parse_directive();
+    AstNode parse_block();
+    AstNode parse_statement();
+
+    const std::vector<ConfigToken>& tokens_;
+    size_t pos_;
 };
 
 #endif // CONFIG_CONFIG_PARSER_HPP_

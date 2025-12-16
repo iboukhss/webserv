@@ -1,6 +1,7 @@
 #include "core/server.hpp"
 
 #include "core/client.hpp"
+#include "core/server_defaults.hpp"
 #include "core/signals.hpp"
 #include "http/http_parser.hpp"
 #include "http/http_version.hpp"
@@ -19,6 +20,7 @@
 #include <unistd.h>
 
 #include <cassert>
+#include <cerrno>
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
@@ -27,7 +29,7 @@ Server::Server(const ServerConfig& config)
     : config_(config),
       epoll_fd_(-1),
       next_id_(1),
-      router_(config)
+      router_(config.locations)
 {
 }
 
@@ -63,7 +65,7 @@ void Server::init()
         if (bind(fd, (sockaddr*) &addr, sizeof(addr)) == -1)
             throw std::runtime_error("bind failed");
 
-        if (listen(fd, config_.backlog) == -1)
+        if (listen(fd, WEBSERV_DEFAULT_MAX_PENDING_CONNECTIONS) == -1)
             throw std::runtime_error("listen failed");
 
         listen_fds_.push_back(fd);
@@ -111,11 +113,11 @@ void Server::accept_connection(int fd)
     socklen_t addr_len = sizeof(addr);
 
     int client_fd = accept4(fd, (sockaddr*) &addr, &addr_len, SOCK_NONBLOCK);
-
-    // This is no big deal, just retry another time
     if (client_fd == -1) {
-        LOG(WARN) << "Client refused";
-        return;
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            return;
+        }
+        throw std::runtime_error("accept4 failed");
     }
 
     Client* client = new Client(client_fd);
@@ -143,16 +145,13 @@ void Server::run()
     LOG(INFO) << "Server started!";
 
     while (!g_sigint_received) {
+
         int n_events = epoll_wait(epoll_fd_, events_, WEBSERV_MAX_EVENTS, -1);
         if (n_events == -1) {
-            switch (errno) {
-            case EINTR:
-                // epoll_wait was interrupted by a signal, just move on as if
-                // nothing happened.
-                n_events = 0;
-                break;
-            default: throw std::runtime_error("epoll_wait failed");
+            if (errno == EINTR) {
+                continue;
             }
+            throw std::runtime_error("epoll_wait failed");
         }
 
         for (int i = 0; i < n_events; ++i) {
@@ -206,7 +205,10 @@ void Server::read_from_socket(Client& conn)
         return;
 
     char tmp[4096];
+
     ssize_t bytes_received = recv(conn.fd(), tmp, sizeof(tmp), 0);
+    if (bytes_received == -1)
+        throw std::runtime_error("recv failed");
 
     if (bytes_received == 0) {
         LOG(INFO) << "Client #" << conn.fd() << ": connection closed by remote client";
@@ -268,7 +270,10 @@ void Server::write_to_socket(Client& conn)
         send_buffer.append(tmp, n);
     }
     if (!send_buffer.empty()) {
-        size_t bytes_sent = send(conn.fd(), send_buffer.data(), send_buffer.size(), 0);
+        ssize_t bytes_sent = send(conn.fd(), send_buffer.data(), send_buffer.size(), 0);
+        if (bytes_sent == -1)
+            throw std::runtime_error("send failed");
+
         if (bytes_sent == 0) {
             LOG(WARN) << "Client #" << conn.fd() << ": failed to send any bytes!";
         }

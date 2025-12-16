@@ -1,7 +1,6 @@
 #ifndef CONFIG_SERVER_CONFIG_HPP_
 #define CONFIG_SERVER_CONFIG_HPP_
 
-#include "core/server_defaults.hpp"
 #include "http/http_response.hpp"
 
 #include <netinet/in.h>
@@ -15,80 +14,79 @@
 // https://nginx.org/en/docs/http/ngx_http_index_module.html
 // https://nginx.org/en/docs/http/ngx_http_rewrite_module.html
 
-// Blocks:
-// http_block { ... }
-// server_block { ... }
-// location_block location_path { ... }
+// Block directives:
+// http { ... }
+// server { ... }
+// location location_path { ... }
 
-// Shared directives:
-// root /path/to/root;
-// allow_methods GET POST ...;
-// error_page code /404.html;
-// index index.html index.htm ...;
-// return code URL;
-
-// cgi_handler .ext /path/to/exec;
-// cgi_allow_methods GET POST ...;
-
-// client_max_body_size 1M;
-// allow_uploads on/off;
-// upload_store /path/to/store;
-// autoindex on/off;
-
-// Server-specific directives:
+// Server directives:
 // listen ip:port [default_server] [backlog=number];
 
-// Route-specific directives:
+// Route directives:
 // alias /path/to/loc;
 
-struct SharedConfig {
-    struct RedirectConfig {
-        HttpResponse::Status code;
-        std::string url;
-    };
+// Shared directives:
+// allow_methods GET POST ...;
+// allow_uploads (on|off);
+// upload_store /path/to/store;
+// autoindex (on|off);
+// cgi_handler .ext /path/to/exec;
+// cgi_allow_methods GET POST ...;
+// client_max_body_size 1M;
+// error_page 404 403 ... /404.html;
+// index index.html index.htm ...;
+// return 301 /url;
+// root /path/to/root;
 
-    struct CgiConfig {
-        std::string extension;
-        std::string exec_path;
-        std::vector<std::string> allowed_methods;
-    };
+struct RedirectConfig {
+    HttpResponse::Status code;
+    std::string url;
+};
 
-    std::string document_root;
+struct CgiConfig {
+    std::string extension;
+    std::string exec_path;
     std::vector<std::string> allowed_methods;
-    std::map<HttpResponse::Status, std::string> error_pages;
-    std::vector<std::string> index_files;
+};
 
-    RedirectConfig redirect;
-    CgiConfig cgi;
-
+struct SharedConfig {
+    std::string document_root;
     size_t max_body_size;
     bool uploads_allowed;
     std::string upload_path;
-
     bool autoindex_enabled;
+
+    std::vector<std::string> allowed_methods;
+    std::vector<std::string> index_files;
+    std::map<HttpResponse::Status, std::string> error_pages;
+    RedirectConfig redirect;
+
+    CgiConfig cgi;
+
+    SharedConfig();
 };
 
 struct RouteConfig {
-    SharedConfig config;
+    std::string path;
+    std::string alias;
 
-    std::string route_path;
-    std::string route_alias;
+    SharedConfig shared;
 };
 
 struct ServerConfig {
-    SharedConfig config;
-
     std::vector<sockaddr_in> listen_addrs;
-    int backlog;
+    std::map<std::string, RouteConfig> locations;
 
-    bool is_default_server;
+    SharedConfig shared;
 
-    std::vector<RouteConfig> locations;
+    void add_listen_addr(const std::string& str);
 };
 
 struct HttpConfig {
     std::vector<ServerConfig> servers;
 };
+
+HttpConfig load_http_config(const std::string& file_path);
 
 ServerConfig make_site1_config();
 ServerConfig make_example_config();

@@ -1,9 +1,9 @@
 Checks:
   - '-*'
-  - 'readability-identifier-naming'
+  - 'cppcoreguidelines-init-variables'
   - 'cppcoreguidelines-special-member-functions'
   - 'google-explicit-constructor'
-  - 'cppcoreguidelines-init-variables'
+  - 'readability-identifier-naming'
 
 CheckOptions:
   # Classes, structs, enums, typedefs

@@ -9,12 +9,13 @@
 
 class Router {
 public:
-    explicit Router(const ServerConfig& config);
+    explicit Router(const std::map<std::string, RouteConfig>& routes);
 
     Handler* handle_request(const HttpRequest& request);
     const RouteConfig& find_best_route(const std::string& request_path);
 
-    const ServerConfig rc;
+private:
+    const std::map<std::string, RouteConfig>& routes_;
 };
 
 #endif // ROUTER_ROUTER_HPP_
