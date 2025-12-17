@@ -18,10 +18,6 @@ public:
     virtual size_t read_data(char* buf, size_t n);
     virtual size_t write_data(const char* buf, size_t n);
 
-    void set_env_var(std::vector<std::string>& child_env_var);
-    int child_reaped(void) const;
-    int parse_headers(std::string& cgi_headers, HttpResponse& res);
-
     virtual bool has_output() const;
     virtual bool needs_input() const
     {
@@ -41,12 +37,13 @@ private:
     CgiHandler(const CgiHandler&);
     CgiHandler& operator=(const CgiHandler&);
 
-    // bool has_body() const { return body_length_ > 0; }
+    void set_res_and_quit(HttpResponse::Status status);
+    std::vector<std::string> build_env_strings() const;
+    bool child_reaped(void) const;
+    int parse_headers(std::string& cgi_headers, HttpResponse& res);
     bool headers_sent() const { return headers_off_ == headers_.size(); }
-    // bool body_written_to_STDIN() const { return eob_reached_; }
 
     const std::string path_;
-
     const HttpRequest& saved_request_;
     const RouteConfig& config_;
 
