@@ -61,6 +61,8 @@ srcs = \
   src/router/router.cpp \
   src/router/router.hpp \
   src/util/itoa.cpp \
+  src/util/to_string.cpp \
+  src/util/to_string.hpp \
   src/util/log_message.cpp \
   src/util/log_message.hpp \
   src/util/str_split.cpp \

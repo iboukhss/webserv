@@ -59,6 +59,25 @@ HttpResponse::Status HttpResponse::parse_status(const std::string& s)
     return HttpResponse::kStatusNone;
 }
 
+HttpResponse::Status HttpResponse::status_from_int(int code)
+{
+    switch (code) {
+    case 200: return HttpResponse::kStatusOk;
+    case 201: return HttpResponse::kStatusCreated;
+    case 204: return HttpResponse::kStatusNoContent;
+    case 400: return HttpResponse::kStatusBadRequest;
+    case 403: return HttpResponse::kStatusForbidden;
+    case 404: return HttpResponse::kStatusNotFound;
+    case 405: return HttpResponse::kStatusMethodNotAllowed;
+    case 409: return HttpResponse::kStatusConflict;
+    case 500: return HttpResponse::kStatusInternalServerError;
+    case 501: return HttpResponse::kStatusNotImplemented;
+    case 502: return HttpResponse::kStatusBadGateway;
+    case 507: return HttpResponse::kStatusDiskFull;
+    default:  return HttpResponse::kStatusInternalServerError;
+    }
+}
+
 std::string HttpResponse::to_string() const
 {
     std::ostringstream out;
@@ -85,4 +104,15 @@ std::string HttpResponse::to_string() const
     out << inline_body;
 
     return out.str();
+}
+
+HttpResponse HttpResponse::make_error(HttpResponse::Status status)
+{
+    HttpResponse res(WEBSERV_DEFAULT_HTTP_VERSION);
+    res.code = status;
+    res.content_type = "text/html; charset=UTF-8";
+    std::ostringstream oss;
+    oss << static_cast<int>(status) << " " << HttpResponse::reason_phrase(status);
+    res.inline_body = oss.str();
+    return res;
 }
