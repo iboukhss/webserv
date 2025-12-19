@@ -41,18 +41,45 @@ CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request
 
     // STEP 0 - Check that file exisst and is executable
     struct stat sb;
-    if (stat(path.c_str(), &sb) == -1 || !S_ISREG(sb.st_mode) ||
-        !(sb.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) || access(path.c_str(), X_OK) != 0) {
+    bool is_interpreter_cgi = !config_.config.cgi.exec_path.empty();
+
+    // Script must exist and be a regular file
+    if (stat(path.c_str(), &sb) == -1 || !S_ISREG(sb.st_mode)) {
         set_res_and_quit(HttpResponse::kStatusForbidden);
         return;
+    }
+
+    if (!is_interpreter_cgi) {
+        // Direct CGI → script itself must be executable
+        if (access(path.c_str(), X_OK) != 0) {
+            set_res_and_quit(HttpResponse::kStatusForbidden);
+            return;
+        }
+    }
+    else {
+        // Interpreter CGI → interpreter must be executable
+        if (access(config_.config.cgi.exec_path.c_str(), X_OK) != 0) {
+            set_res_and_quit(HttpResponse::kStatusInternalServerError);
+            return;
+        }
     }
 
     // STEP 1 - Prepare key=value pair vector to be passed to child process to set env var
     std::vector<std::string> env_strings = build_env_strings();
     std::vector<char*> envp = make_envp(env_strings);
-    char* argv[2];
-    argv[0] = const_cast<char*>(path_.c_str());
-    argv[1] = NULL;
+    char* argv[3];
+
+    if (is_interpreter_cgi) {
+        // Interpreter-based CGI
+        argv[0] = const_cast<char*>(config_.config.cgi.exec_path.c_str());
+        argv[1] = const_cast<char*>(path_.c_str());
+        argv[2] = NULL;
+    }
+    else {
+        // Direct executable CGI (binary or shebang)
+        argv[0] = const_cast<char*>(path_.c_str());
+        argv[1] = NULL;
+    }
 
     // STEP 2 - set up pipes
     if (saved_request_.method == "POST") {
@@ -85,6 +112,7 @@ CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request
         dup2(output_fd_[1], STDOUT_FILENO);
         close(output_fd_[1]); // as now duplicated to STDOUT
         execve(argv[0], argv, envp.data());
+        // execve(argv[0], argv, envp.data());
         _exit(1);
     }
     else {
@@ -139,17 +167,28 @@ std::vector<std::string> CgiHandler::build_env_strings() const
     std::vector<std::string> env;
 
     env.push_back("REQUEST_METHOD=" + saved_request_.method);
-    env.push_back("SCRIPT_FILENAME=" + saved_request_.path);
+    env.push_back("SERVER_PROTOCOL=HTTP/1.1");
+    env.push_back("PATH_INFO=/");
+    env.push_back("SCRIPT_NAME=" + saved_request_.path);
     env.push_back("QUERY_STRING=" + saved_request_.query_string);
-
     env.push_back("CONTENT_LENGTH=" + to_string(saved_request_.content_length));
     if (saved_request_.method == "POST") {
         env.push_back("CONTENT_TYPE=application/x-www-form-urlencoded");
     }
-    env.push_back("SERVER_NAME=localhost"); // to be updated based on config or removed
-    env.push_back("SERVER_PROTOCOL=HTTP/1.1");
+    env.push_back("SERVER_NAME=localhost"); // to be updated based on config
+
     env.push_back("SERVER_PORT=" + to_string(WEBSERV_DEFAULT_PORT));
     env.push_back("PATH=/usr/bin:/bin");
+
+    env.push_back("GATEWAY_INTERFACE=CGI/1.1");
+
+    env.push_back("REQUEST_URI=" + saved_request_.path +
+                  (saved_request_.query_string.empty() ? "" : "?" + saved_request_.query_string));
+    env.push_back("REDIRECT_STATUS=200"); // VERY IMPORTANT
+
+    for (size_t i = 0; i < env.size(); ++i) {
+        LOG(DEBUG) << "CGI ENV: " << env[i];
+    }
 
     return (env);
 }

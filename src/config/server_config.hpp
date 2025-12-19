@@ -88,6 +88,7 @@ struct HttpConfig {
 
 HttpConfig load_http_config(const std::string& file_path);
 
+ServerConfig make_youpi_banane_test_config();
 ServerConfig make_site1_config();
 ServerConfig make_example_config();
 ServerConfig make_python_docs_config();
