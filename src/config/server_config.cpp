@@ -215,6 +215,40 @@ ServerConfig make_example_config()
     return srv;
 }
 
+ServerConfig make_youpi_banane_test_config()
+{
+    ServerConfig server;
+
+    server.is_default_server = true;
+    server.backlog = 128;
+
+    server.config.document_root = "/tests";
+    server.config.allowed_methods.push_back("GET");
+
+    // CGI for .bla
+    server.config.cgi.extension = ".bla";
+    server.config.cgi.exec_path = "/tests/ubuntu_cgi_tester";
+    server.config.cgi.allowed_methods.push_back("POST");
+
+    // /post_body
+    RouteConfig post_body;
+    post_body.route_path = "/post_body";
+    post_body.config.allowed_methods.push_back("POST");
+    post_body.config.max_body_size = 100;
+
+    // /directory/
+    RouteConfig directory;
+    directory.route_path = "/directory/";
+    directory.route_alias = "/absolute/path/YoupiBanane";
+    directory.config.allowed_methods.push_back("GET");
+    directory.config.index_files.push_back("youpi.bad_extension");
+
+    server.locations.push_back(post_body);
+    server.locations.push_back(directory);
+
+    return server;
+}
+
 ServerConfig make_python_docs_config()
 {
     ServerConfig srv("www/python_docs");
