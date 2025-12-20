@@ -123,6 +123,10 @@ test: $(test_target)
 	@echo "Running unit tests..."
 	./$(test_target)
 
+test_cgi: $(test_target)
+	@echo "Running unit tests..."
+	./$(test_target) --filter=CgiHandler*
+
 $(test_target): $(test_objs) $(filter-out build/$(CONFIG)/obj/main.o,$(objs))
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $^ -o $@
