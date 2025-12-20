@@ -241,11 +241,11 @@ UTEST(CgiHandler, EmptyOutput)
 UTEST(CgiHandler, PythonScript_GET)
 {
     std::string script = "tests/cgi_upper.py";
-    std::string query_string_ = "hello=world=returned=UPPER=case";
+    std::string query = "hello=world=returned=UPPER=case";
     HttpRequest req;
     req.method = "GET";
     req.path = script;
-    req.query_string = query_string_;
+    req.query_string = query;
     req.content_length = 0;
 
     RouteConfig cfg;
@@ -264,7 +264,7 @@ UTEST(CgiHandler, PythonScript_GET)
     res.code = HttpResponse::kStatusOk;
     res.content_type = "text/plain";
     res.keep_alive = true;
-    std::string expected_body = query_string_;
+    std::string expected_body = query;
     for (size_t i = 0; i < expected_body.size(); ++i)
         expected_body[i] = std::toupper(expected_body[i]);
     res.inline_body = expected_body;
