@@ -46,11 +46,20 @@ private:
     }
 };
 
+void print_response_expected(const std::string& response, const std::string& expected)
+{
+    std::cout << "reponse = " << std::endl << response << std::endl;
+    std::cout << "expected = " << std::endl << expected << std::endl;
+    std::cout << "response size = " << response.size() << std::endl;
+    std::cout << "expected size = " << expected.size() << std::endl;
+}
+
 UTEST(CgiHandler, SimpleGet)
 {
     TempCgiScript script("echo \"Content-Type: text/plain\"\n"
+                         "echo \"Content-Length: 9\"\n"
                          "echo\n"
-                         "echo \"Hello CGI\"");
+                         "echo -n \"Hello CGI\"");
 
     HttpRequest req;
     req.method = "GET";
@@ -69,12 +78,22 @@ UTEST(CgiHandler, SimpleGet)
         if (n > 0)
             response.append(buf, n);
     }
-    ASSERT_TRUE(response.find("Hello CGI") != std::string::npos);
+    HttpResponse res;
+    res.code = HttpResponse::kStatusOk;
+    res.content_type = "text/plain";
+    res.keep_alive = true;
+    res.inline_body = "Hello CGI";
+
+    std::string expected = res.to_string();
+    // print_response_expected(response, expected);
+    ASSERT_TRUE(response == expected);
 }
 
 UTEST(CgiHandler, PostBody)
 {
+    const char* body = "hello world"; // update Content-Length in script if body changes
     TempCgiScript script("echo \"Content-Type: text/plain\"\n"
+                         "echo \"Content-Length: 11\"\n"
                          "echo\n"
                          "cat -");
 
@@ -82,16 +101,14 @@ UTEST(CgiHandler, PostBody)
     req.method = "POST";
     req.path = script.path();
     req.query_string = "";
-    req.content_length = 11;
+    req.content_length = strlen(body); // length of body
 
     RouteConfig cfg;
 
     CgiHandler handler(script.path(), req, cfg);
 
-    const char* body = "hello world";
-
     while (handler.needs_input()) {
-        handler.write_data(body, 11);
+        handler.write_data(body, req.content_length);
     }
 
     char buf[1024];
@@ -103,13 +120,19 @@ UTEST(CgiHandler, PostBody)
             response.append(buf, n);
     }
 
-    ASSERT_TRUE(response.find("hello world") != std::string::npos);
+    HttpResponse res;
+    res.code = HttpResponse::kStatusOk;
+    res.content_type = "text/plain";
+    res.keep_alive = true;
+    res.inline_body = body;
+
+    std::string expected = res.to_string();
+    // print_response_expected(response, expected);
+    ASSERT_TRUE(response == expected);
 }
 
 UTEST(CgiHandler, MissingContentType)
 {
-
-    UTEST_SKIP("TODO: Test produces instable results");
     TempCgiScript script("echo\n"
                          "echo \"No headers\"");
 
@@ -131,8 +154,10 @@ UTEST(CgiHandler, MissingContentType)
         if (n > 0)
             response.append(buf, n);
     }
-
-    ASSERT_TRUE(response.find("502") != std::string::npos);
+    HttpResponse res = res.make_error(HttpResponse::kStatusBadGateway);
+    std::string expected = res.to_string();
+    // print_response_expected(response, expected);
+    ASSERT_TRUE(response == expected);
 }
 
 class TempFile {
@@ -176,8 +201,10 @@ UTEST(CgiHandler, NotExecutable)
         if (n > 0)
             response.append(buf, n);
     }
-
-    ASSERT_TRUE(response.find("403") != std::string::npos);
+    HttpResponse res = res.make_error(HttpResponse::kStatusForbidden);
+    std::string expected = res.to_string();
+    // print_response_expected(response, expected);
+    ASSERT_TRUE(response == expected);
 }
 
 UTEST(CgiHandler, EmptyOutput)
@@ -195,23 +222,30 @@ UTEST(CgiHandler, EmptyOutput)
     CgiHandler handler(script.path(), req, cfg);
 
     char buf[128];
-    size_t total = 0;
-
+    size_t n = 0;
+    std::string response;
     while (!handler.is_done()) {
-        total += handler.read_data(buf, sizeof(buf));
+        n = handler.read_data(buf, sizeof(buf));
+        if (n > 0)
+            response.append(buf, n);
     }
-
-    ASSERT_TRUE(total >= 0); // should terminate cleanly
+    HttpResponse res;
+    res.code = HttpResponse::kStatusOk;
+    res.content_type = "text/plain";
+    res.keep_alive = true;
+    std::string expected = res.to_string();
+    // print_response_expected(response, expected);
+    ASSERT_TRUE(response == expected);
 }
 
-UTEST(CgiHandler, RealScript_GET)
+UTEST(CgiHandler, PythonScript_GET)
 {
     std::string script = "tests/cgi_upper.py";
-
+    std::string query_string_ = "hello=world=returned=UPPER=case";
     HttpRequest req;
     req.method = "GET";
     req.path = script;
-    req.query_string = "hello=world";
+    req.query_string = query_string_;
     req.content_length = 0;
 
     RouteConfig cfg;
@@ -226,26 +260,29 @@ UTEST(CgiHandler, RealScript_GET)
         if (n > 0)
             response.append(buf, n);
     }
-
-    // Body should contain uppercased query string
-    ASSERT_TRUE(response.find("HELLO=WORLD") != std::string::npos);
-
-    // Optional sanity checks
-
-    ASSERT_TRUE(response.find("200") != std::string::npos);
+    HttpResponse res;
+    res.code = HttpResponse::kStatusOk;
+    res.content_type = "text/plain";
+    res.keep_alive = true;
+    std::string expected_body = query_string_;
+    for (size_t i = 0; i < expected_body.size(); ++i)
+        expected_body[i] = std::toupper(expected_body[i]);
+    res.inline_body = expected_body;
+    std::string expected = res.to_string();
+    // print_response_expected(response, expected);
+    ASSERT_TRUE(response == expected);
 }
 
-UTEST(CgiHandler, RealScript_POST)
+UTEST(CgiHandler, PythonScript_POST)
 {
     std::string script = "tests/cgi_upper.py";
-
-    const char* body = "Hello CGI";
+    const char* body = "hello=world=returned=UPPER=case=after=POST";
     size_t body_len = strlen(body);
 
     HttpRequest req;
     req.method = "POST";
     req.path = script;
-    req.query_string = "";
+    req.query_string = "SOME=QUERY=STRING";
     req.content_length = body_len;
 
     RouteConfig cfg;
@@ -265,8 +302,66 @@ UTEST(CgiHandler, RealScript_POST)
         if (n > 0)
             response.append(buf, n);
     }
-    // std::cout << response << std::endl;
-    ASSERT_TRUE(response.find("HELLO CGI") != std::string::npos);
+    HttpResponse res;
+    res.code = HttpResponse::kStatusOk;
+    res.content_type = "text/plain";
+    res.keep_alive = true;
+    std::string expected_body = body;
+    for (size_t i = 0; i < expected_body.size(); ++i)
+        expected_body[i] = std::toupper(expected_body[i]);
+    res.inline_body = expected_body;
+    std::string expected = res.to_string();
+    // print_response_expected(response, expected);
+    ASSERT_TRUE(response == expected);
+}
+
+UTEST(CgiHandler, PythonScript_POST_1MB_Payload)
+{
+
+    UTEST_SKIP("TODO: output pipe closed to early, fix required");
+    std::string script = "tests/cgi_upper.py";
+    const size_t body_len = 1024 * 1024; // 1 MB
+    std::string body(body_len, 'a');
+
+    HttpRequest req;
+    req.method = "POST";
+    req.path = script;
+    req.query_string = "SOME=QUERY=STRING";
+    req.content_length = body_len;
+
+    RouteConfig cfg;
+
+    CgiHandler handler(script, req, cfg);
+
+    // Write POST body (will require multiple writes)
+    size_t written = 0;
+    while (handler.needs_input()) {
+        size_t chunk = body_len - written;
+        size_t n = handler.write_data(body.data() + written, chunk);
+        written += n;
+    }
+
+    ASSERT_EQ(written, body_len);
+
+    char buf[4096];
+    std::string response;
+
+    while (!handler.is_done()) {
+        size_t n = handler.read_data(buf, sizeof(buf));
+        if (n > 0)
+            response.append(buf, n);
+    }
+    HttpResponse res;
+    res.code = HttpResponse::kStatusOk;
+    res.content_type = "text/plain";
+    res.keep_alive = true;
+    std::string expected_body = body;
+    for (size_t i = 0; i < expected_body.size(); ++i)
+        expected_body[i] = std::toupper(expected_body[i]);
+    res.inline_body = expected_body;
+    std::string expected = res.to_string();
+    // print_response_expected(response, expected);
+    ASSERT_TRUE(response == expected);
 }
 
 UTEST(Config, Bla_Rejects_Get)

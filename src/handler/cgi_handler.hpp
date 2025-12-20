@@ -23,9 +23,18 @@ public:
     {
         return input_fd_[1] != -1 && bytes_written_body_ < body_length_;
     };
-    virtual bool is_done() const
+    bool is_done() const
     {
+        // Progress child lifecycle
         child_reaped();
+
+        // Close CGI stdout pipe exactly once, after draining everything
+        if (eoo_reached_ && headers_sent_ && output_body_.empty() && output_fd_[0] != -1) {
+            close(output_fd_[0]);
+            output_fd_[0] = -1;
+        }
+
+        // Final completion condition
         return eoo_reached_ && !needs_input() && child_reaped_ && !has_output();
     }
     const std::string& path() const { return path_; }
@@ -67,7 +76,7 @@ private:
 
     // pipes
     int input_fd_[2];
-    int output_fd_[2];
+    mutable int output_fd_[2];
 
     // child process pid
     mutable pid_t pid_;

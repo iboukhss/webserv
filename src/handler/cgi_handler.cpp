@@ -31,7 +31,8 @@ CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request
       headers_sent_(false),
       eob_reached_(false),
       eoo_reached_(false),
-      child_reaped_(false)
+      child_reaped_(false),
+      pid_(-1)
 {
     // setting default values for pipes
     input_fd_[0] = -1;
@@ -186,6 +187,8 @@ std::vector<std::string> CgiHandler::build_env_strings() const
                   (saved_request_.query_string.empty() ? "" : "?" + saved_request_.query_string));
     env.push_back("REDIRECT_STATUS=200"); // VERY IMPORTANT
 
+    LOG(DEBUG) << "saved_request_.path = " << saved_request_.path;
+
     for (size_t i = 0; i < env.size(); ++i) {
         LOG(DEBUG) << "CGI ENV: " << env[i];
     }
@@ -196,6 +199,9 @@ std::vector<std::string> CgiHandler::build_env_strings() const
 bool CgiHandler::child_reaped(void) const
 {
     if (child_reaped_) {
+        return true;
+    }
+    if (pid_ < 0) {
         return true;
     }
     int status = 0;
@@ -282,15 +288,21 @@ size_t CgiHandler::read_data(char* buf, size_t n)
     LOG(DEBUG) << "bytes_read = " << bytes_read;
     if (bytes_read == 0) {
         eoo_reached_ = true;
-        close(output_fd_[0]);
-        output_fd_[0] = -1;
+        // close(output_fd_[0]);
+        // output_fd_[0] = -1;
+        if (!headers_parsed_) {
+            set_res_and_quit(HttpResponse::kStatusBadGateway);
+        }
         return 0; // finished reading
     }
     if (bytes_read < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
             return 0; // pipe not available for read
         }
-        set_res_and_quit(HttpResponse::kStatusBadGateway);
+        if (!headers_parsed_) {
+            set_res_and_quit(HttpResponse::kStatusBadGateway);
+        }
+        eoo_reached_ = true;
         return 0;
     }
 
@@ -354,7 +366,7 @@ int CgiHandler::parse_headers(std::string& cgi_headers, HttpResponse& res)
     if (pos_content != std::string::npos) {
         size_t line_end = cgi_headers.find("\n", pos_content);
         std::string content_line =
-            cgi_headers.substr(pos_content + 13, line_end - (pos_content + 13));
+            cgi_headers.substr(pos_content + 14, line_end - (pos_content + 14));
         str_trim(content_line);
         content_type = content_line;
     }
@@ -362,8 +374,21 @@ int CgiHandler::parse_headers(std::string& cgi_headers, HttpResponse& res)
     if (content_type.empty()) {
         return 1;
     }
+
+    int content_length = 0;
+    size_t pos_length = cgi_headers.find("Content-Length:");
+    if (pos_length != std::string::npos) {
+        size_t line_end = cgi_headers.find("\n", pos_length);
+        std::string length_line = cgi_headers.substr(pos_length + 15, line_end - (pos_length + 15));
+        str_trim(length_line);
+        content_length = atoi(length_line.c_str());
+    }
+
     res.code = HttpResponse::status_from_int(status_code);
     res.content_type = content_type;
+    if (content_length > 0) {
+        res.content_length = content_length;
+    };
     // LOG(DEBUG) << res.to_string();
     return (0);
 }
