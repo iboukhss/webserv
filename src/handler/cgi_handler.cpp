@@ -30,7 +30,9 @@ CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request
       headers_parsed_(false),
       headers_sent_(false),
       eob_reached_(false),
+      eof_reached_(false),
       eoo_reached_(false),
+      forced_response_(false),
       child_reaped_(false),
       pid_(-1)
 {
@@ -147,8 +149,8 @@ void CgiHandler::set_res_and_quit(HttpResponse::Status status)
     headers_parsed_ = true;
     headers_sent_ = false;
     headers_off_ = 0;
-    eoo_reached_ = true;
-    child_reaped_ = true;
+    // eoo_reached_ = true;
+    forced_response_ = true;
 }
 
 static std::vector<char*> make_envp(std::vector<std::string>& env)
@@ -235,13 +237,12 @@ size_t CgiHandler::write_data(const char* buf, size_t n)
         return 0;
     }
     bytes_written_body_ += bytes;
-    if (bytes_written_body_ < body_length_) {
-        return (bytes);
+    if (bytes_written_body_ >= body_length_) {
+        close(input_fd_[1]);
+        input_fd_[1] = -1;
     }
-    close(input_fd_[1]);
-    input_fd_[1] = -1;
     // LOG(INFO) << "CgiHandler : Body fully written to STDIN";
-    return (0);
+    return (bytes);
 }
 
 bool CgiHandler::has_output() const
@@ -255,6 +256,22 @@ bool CgiHandler::has_output() const
 
 size_t CgiHandler::read_data(char* buf, size_t n)
 {
+    if (forced_response_) {
+        if (headers_parsed_ && !headers_sent_) {
+            size_t remain = headers_.size() - headers_off_;
+            size_t to_copy = std::min(remain, n);
+
+            memcpy(buf, headers_.data() + headers_off_, to_copy);
+            headers_off_ += to_copy;
+
+            if (headers_off_ == headers_.size())
+                headers_sent_ = true;
+
+            return to_copy;
+        }
+        return 0;
+    }
+
     if (headers_parsed_ && !headers_sent_) {
         size_t remain = headers_.size() - headers_off_;
         size_t to_copy = std::min(remain, n);
@@ -287,65 +304,64 @@ size_t CgiHandler::read_data(char* buf, size_t n)
     ssize_t bytes_read = read(output_fd_[0], tmp, sizeof(tmp));
     LOG(DEBUG) << "bytes_read = " << bytes_read;
     if (bytes_read == 0) {
-        eoo_reached_ = true;
-        // close(output_fd_[0]);
-        // output_fd_[0] = -1;
-        if (!headers_parsed_) {
+        eof_reached_ = true;
+        // eoo_reached_ = true;
+        //  close(output_fd_[0]);
+        //  output_fd_[0] = -1;
+        /*if (!headers_parsed_) {
             set_res_and_quit(HttpResponse::kStatusBadGateway);
-        }
-        return 0; // finished reading
+        }*/
     }
-    if (bytes_read < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            return 0; // pipe not available for read
+    else if (bytes_read < 0) {
+        if (errno != EAGAIN && errno != EWOULDBLOCK) {
+            if (!headers_parsed_) {
+                set_res_and_quit(HttpResponse::kStatusBadGateway);
+            }
+            eoo_reached_ = true;
         }
-        if (!headers_parsed_) {
-            set_res_and_quit(HttpResponse::kStatusBadGateway);
-        }
-        eoo_reached_ = true;
-        return 0;
     }
+    else {
+        if (!headers_parsed_) {
+            raw_output_.append(tmp, bytes_read);
 
-    if (!headers_parsed_) {
-        raw_output_.append(tmp, bytes_read);
+            size_t header_end = raw_output_.find("\r\n\r\n");
+            size_t sep_len = 4;
 
-        size_t header_end = raw_output_.find("\r\n\r\n");
-        size_t sep_len = 4;
+            if (header_end == std::string::npos) {
+                header_end = raw_output_.find("\n\n");
+                sep_len = 2;
+            }
+            if (header_end != std::string::npos) {
+                std::string cgi_headers = raw_output_.substr(0, header_end);
+                std::string remainder = raw_output_.substr(header_end + sep_len);
 
-        if (header_end == std::string::npos) {
-            header_end = raw_output_.find("\n\n");
-            sep_len = 2;
-        }
-        if (header_end == std::string::npos) {
-            // Still waiting for full CGI header block
-            return 0;
-        }
+                HttpResponse res;
+                if (parse_headers(cgi_headers, res) != 0) {
+                    set_res_and_quit(HttpResponse::kStatusBadGateway);
+                }
+                else {
+                    // Build real HTTP headers (your to_string should include content-type, etc.)
+                    headers_.append(res.to_string());
+                }
 
-        std::string cgi_headers = raw_output_.substr(0, header_end);
-        std::string remainder = raw_output_.substr(header_end + sep_len);
+                headers_parsed_ = true;
+                headers_sent_ = false;
+                headers_off_ = 0;
 
-        HttpResponse res;
-        if (parse_headers(cgi_headers, res) != 0) {
-            set_res_and_quit(HttpResponse::kStatusBadGateway);
+                // Buffer any bytes that were already part of body
+                output_body_.append(remainder);
+
+                // Clear raw buffer (we don't need it anymore once headers are parsed)
+                raw_output_.clear();
+            }
         }
         else {
-            // Build real HTTP headers (your to_string should include content-type, etc.)
-            headers_.append(res.to_string());
+            output_body_.append(tmp, bytes_read);
         }
-
-        headers_parsed_ = true;
-        headers_sent_ = false;
-        headers_off_ = 0;
-
-        // Buffer any bytes that were already part of body
-        output_body_.append(remainder);
-
-        // Clear raw buffer (we don't need it anymore once headers are parsed)
-        raw_output_.clear();
-        return 0;
     }
-
-    output_body_.append(tmp, bytes_read);
+    if (eof_reached_ == true && child_reaped() == true) {
+        eoo_reached_ = true;
+    }
     return 0;
 }
 
