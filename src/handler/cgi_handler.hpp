@@ -25,11 +25,15 @@ public:
     };
     bool is_done() const
     {
+        if (forced_response_) {
+            return !has_output();
+        }
         // Progress child lifecycle
         child_reaped();
 
         // Close CGI stdout pipe exactly once, after draining everything
-        if (eoo_reached_ && headers_sent_ && output_body_.empty() && output_fd_[0] != -1) {
+        if (!forced_response_ && eoo_reached_ && headers_sent_ && output_body_.empty() &&
+            output_fd_[0] != -1) {
             close(output_fd_[0]);
             output_fd_[0] = -1;
         }
@@ -71,7 +75,9 @@ private:
     bool headers_parsed_;
     bool headers_sent_;
     bool eob_reached_;
+    bool eof_reached_;
     bool eoo_reached_;
+    bool forced_response_;
     mutable bool child_reaped_;
 
     // pipes

@@ -156,7 +156,7 @@ UTEST(CgiHandler, MissingContentType)
     }
     HttpResponse res = res.make_error(HttpResponse::kStatusBadGateway);
     std::string expected = res.to_string();
-    // print_response_expected(response, expected);
+    print_response_expected(response, expected);
     ASSERT_TRUE(response == expected);
 }
 
@@ -318,7 +318,7 @@ UTEST(CgiHandler, PythonScript_POST)
 UTEST(CgiHandler, PythonScript_POST_1MB_Payload)
 {
 
-    UTEST_SKIP("TODO: output pipe closed to early, fix required");
+    // UTEST_SKIP("TODO: output pipe closed to early, fix required");
     std::string script = "tests/cgi_upper.py";
     const size_t body_len = 1024 * 1024; // 1 MB
     std::string body(body_len, 'a');
