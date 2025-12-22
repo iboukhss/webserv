@@ -56,9 +56,19 @@ private:
     bool parse_headers(std::string& cgi_headers, HttpResponse& res);
     bool headers_sent() const { return headers_off_ == headers_.size(); }
 
+    // constructor helper functions
+    void init_state();
+    bool validate_cgi_target(bool is_interpreter_cgi);
+    void build_exec_context(char** argv, bool is_interpreter_cgi);
+    bool setup_pipes();
+    void spawn_child(char** argv);
+
     const std::string path_;
     const HttpRequest& saved_request_;
     const RouteConfig& config_;
+
+    std::vector<char*> envp_;
+    std::vector<std::string> env_strings_;
 
     // POST/GET - strings used to parse the cgi output
     std::string raw_output_;
