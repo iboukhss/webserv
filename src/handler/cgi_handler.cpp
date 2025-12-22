@@ -18,138 +18,39 @@
 
 static std::vector<char*> make_envp(std::vector<std::string>& env);
 
-CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request,
-                       const RouteConfig& config)
-    : path_(path),
-      saved_request_(saved_request),
-      config_(config),
-      headers_off_(0),
-      output_body_off_(0),
-      bytes_written_body_(0),
-      body_length_(saved_request.content_length),
-      headers_parsed_(false),
-      headers_sent_(false),
-      eob_reached_(false),
-      eof_reached_(false),
-      eoo_reached_(false),
-      forced_response_(false),
-      child_reaped_(false),
-      pid_(-1)
+void CgiHandler::init_state()
 {
-    // setting default values for pipes
     input_fd_[0] = -1;
     input_fd_[1] = -1;
     output_fd_[0] = -1;
     output_fd_[1] = -1;
+}
 
-    // STEP 0 - Check that file exisst and is executable
+bool CgiHandler::validate_cgi_target(bool is_interpreter_cgi)
+{
     struct stat sb;
-    bool is_interpreter_cgi = !config_.config.cgi.exec_path.empty();
 
     // Script must exist and be a regular file
-    if (stat(path.c_str(), &sb) == -1 || !S_ISREG(sb.st_mode)) {
+    if (stat(path_.c_str(), &sb) == -1 || !S_ISREG(sb.st_mode)) {
         set_res_and_quit(HttpResponse::kStatusForbidden);
-        return;
+        return false;
     }
 
     if (!is_interpreter_cgi) {
         // Direct CGI → script itself must be executable
-        if (access(path.c_str(), X_OK) != 0) {
+        if (access(path_.c_str(), X_OK) != 0) {
             set_res_and_quit(HttpResponse::kStatusForbidden);
-            return;
+            return false;
         }
     }
     else {
         // Interpreter CGI → interpreter must be executable
         if (access(config_.config.cgi.exec_path.c_str(), X_OK) != 0) {
             set_res_and_quit(HttpResponse::kStatusInternalServerError);
-            return;
+            return false;
         }
     }
-
-    // STEP 1 - Prepare key=value pair vector to be passed to child process to set env var
-    std::vector<std::string> env_strings = build_env_strings();
-    std::vector<char*> envp = make_envp(env_strings);
-    char* argv[3];
-
-    if (is_interpreter_cgi) {
-        // Interpreter-based CGI
-        argv[0] = const_cast<char*>(config_.config.cgi.exec_path.c_str());
-        argv[1] = const_cast<char*>(path_.c_str());
-        argv[2] = NULL;
-    }
-    else {
-        // Direct executable CGI (binary or shebang)
-        argv[0] = const_cast<char*>(path_.c_str());
-        argv[1] = NULL;
-    }
-
-    // STEP 2 - set up pipes
-    if (saved_request_.method == "POST") {
-        if (pipe(input_fd_) == -1) {
-            set_res_and_quit(HttpResponse::kStatusInternalServerError);
-            return;
-        }
-    }
-    if (pipe(output_fd_) == -1) {
-        set_res_and_quit(HttpResponse::kStatusInternalServerError);
-        return;
-    }
-
-    // STEP 3 - Fork child process
-    pid_ = fork();
-    if (pid_ == -1) {
-        set_res_and_quit(HttpResponse::kStatusInternalServerError);
-        return;
-    }
-
-    if (pid_ == 0) { // child process - setting up pipes
-        // closing the write end and replacing STDIN by the read end of the input pipe
-        if (saved_request_.method == "POST") {
-            close(input_fd_[1]);
-            dup2(input_fd_[0], STDIN_FILENO);
-            close(input_fd_[0]); // as now duplicated to STDIN
-        }
-        // closing the read end and replacing STDOUT by the write end of the output pipe
-        close(output_fd_[0]);
-        dup2(output_fd_[1], STDOUT_FILENO);
-        close(output_fd_[1]); // as now duplicated to STDOUT
-        execve(argv[0], argv, envp.data());
-        // execve(argv[0], argv, envp.data());
-        _exit(1);
-    }
-    else {
-        // parent process - setting up pipes
-        // closing read end of input_fd
-        if (saved_request_.method == "POST") {
-            close(input_fd_[0]);
-            fcntl(input_fd_[1], F_SETFL, O_NONBLOCK);
-        }
-        // closing write end of the output_fd
-        close(output_fd_[1]);
-        fcntl(output_fd_[0], F_SETFL, O_NONBLOCK);
-    }
-}
-
-CgiHandler::~CgiHandler()
-{
-    if (input_fd_[1] != -1) {
-        close(input_fd_[1]);
-        input_fd_[1] = -1;
-    }
-    if (output_fd_[0] != -1) {
-        close(output_fd_[0]);
-        output_fd_[0] = -1;
-    }
-}
-
-void CgiHandler::set_res_and_quit(HttpResponse::Status status)
-{
-    headers_ = HttpResponse::make_error(status).to_string();
-    headers_parsed_ = true;
-    headers_sent_ = false;
-    headers_off_ = 0;
-    forced_response_ = true;
+    return true;
 }
 
 static std::vector<char*> make_envp(std::vector<std::string>& env)
@@ -195,6 +96,134 @@ std::vector<std::string> CgiHandler::build_env_strings() const
     }
 
     return (env);
+}
+
+void CgiHandler::build_exec_context(char** argv, bool is_interpreter_cgi)
+{
+    env_strings_ = build_env_strings();
+    envp_ = make_envp(env_strings_);
+
+    if (is_interpreter_cgi) {
+        // Interpreter-based CGI
+        argv[0] = const_cast<char*>(config_.config.cgi.exec_path.c_str());
+        argv[1] = const_cast<char*>(path_.c_str());
+        argv[2] = NULL;
+    }
+    else {
+        // Direct executable CGI (binary or shebang)
+        argv[0] = const_cast<char*>(path_.c_str());
+        argv[1] = NULL;
+    }
+}
+
+bool CgiHandler::setup_pipes()
+{
+    if (saved_request_.method == "POST") {
+        if (pipe(input_fd_) == -1) {
+            set_res_and_quit(HttpResponse::kStatusInternalServerError);
+            return false;
+        }
+    }
+    if (pipe(output_fd_) == -1) {
+        set_res_and_quit(HttpResponse::kStatusInternalServerError);
+        return false;
+    }
+    return true;
+}
+
+void CgiHandler::spawn_child(char** argv)
+{
+    pid_ = fork();
+    if (pid_ == -1) {
+        set_res_and_quit(HttpResponse::kStatusInternalServerError);
+        return;
+    }
+
+    if (pid_ == 0) { // child process - setting up pipes
+        // closing the write end and replacing STDIN by the read end of the input pipe
+        if (saved_request_.method == "POST") {
+            close(input_fd_[1]);
+            dup2(input_fd_[0], STDIN_FILENO);
+            close(input_fd_[0]); // as now duplicated to STDIN
+        }
+        // closing the read end and replacing STDOUT by the write end of the output pipe
+        close(output_fd_[0]);
+        dup2(output_fd_[1], STDOUT_FILENO);
+        close(output_fd_[1]); // as now duplicated to STDOUT
+        execve(argv[0], argv, envp_.data());
+        // execve(argv[0], argv, envp.data());
+        _exit(1);
+    }
+    else {
+        // parent process - setting up pipes
+        // closing read end of input_fd
+        if (saved_request_.method == "POST") {
+            close(input_fd_[0]);
+            fcntl(input_fd_[1], F_SETFL, O_NONBLOCK);
+        }
+        // closing write end of the output_fd
+        close(output_fd_[1]);
+        fcntl(output_fd_[0], F_SETFL, O_NONBLOCK);
+    }
+}
+
+CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request,
+                       const RouteConfig& config)
+    : path_(path),
+      saved_request_(saved_request),
+      config_(config),
+      headers_off_(0),
+      output_body_off_(0),
+      bytes_written_body_(0),
+      body_length_(saved_request.content_length),
+      headers_parsed_(false),
+      headers_sent_(false),
+      eob_reached_(false),
+      eof_reached_(false),
+      eoo_reached_(false),
+      forced_response_(false),
+      child_reaped_(false),
+      pid_(-1)
+{
+    // STEP 0 - Set pipe default values
+    init_state();
+
+    // STEP 1 - Check that file exisst and is executable
+    bool is_interpreter_cgi = !config_.config.cgi.exec_path.empty();
+    if (validate_cgi_target(is_interpreter_cgi) != true)
+        return;
+
+    // STEP 2 - prepare environment variables and argv for child process
+    char* argv[3];
+    build_exec_context(argv, is_interpreter_cgi);
+
+    // STEP 3 - set up pipes
+    if (setup_pipes() != true)
+        return;
+
+    // STEP 4 - Fork child process
+    spawn_child(argv);
+}
+
+CgiHandler::~CgiHandler()
+{
+    if (input_fd_[1] != -1) {
+        close(input_fd_[1]);
+        input_fd_[1] = -1;
+    }
+    if (output_fd_[0] != -1) {
+        close(output_fd_[0]);
+        output_fd_[0] = -1;
+    }
+}
+
+void CgiHandler::set_res_and_quit(HttpResponse::Status status)
+{
+    headers_ = HttpResponse::make_error(status).to_string();
+    headers_parsed_ = true;
+    headers_sent_ = false;
+    headers_off_ = 0;
+    forced_response_ = true;
 }
 
 bool CgiHandler::child_reaped(void) const
