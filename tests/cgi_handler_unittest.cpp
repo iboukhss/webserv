@@ -156,7 +156,7 @@ UTEST(CgiHandler, MissingContentType)
     }
     HttpResponse res = res.make_error(HttpResponse::kStatusBadGateway);
     std::string expected = res.to_string();
-    print_response_expected(response, expected);
+    // print_response_expected(response, expected);
     ASSERT_TRUE(response == expected);
 }
 

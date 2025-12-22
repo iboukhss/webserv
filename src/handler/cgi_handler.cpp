@@ -149,7 +149,6 @@ void CgiHandler::set_res_and_quit(HttpResponse::Status status)
     headers_parsed_ = true;
     headers_sent_ = false;
     headers_off_ = 0;
-    // eoo_reached_ = true;
     forced_response_ = true;
 }
 
@@ -241,13 +240,12 @@ size_t CgiHandler::write_data(const char* buf, size_t n)
         close(input_fd_[1]);
         input_fd_[1] = -1;
     }
-    // LOG(INFO) << "CgiHandler : Body fully written to STDIN";
     return (bytes);
 }
 
 bool CgiHandler::has_output() const
 {
-    if (headers_parsed_ && !headers_sent_)
+    if (headers_parsed_ && !headers_sent())
         return true;
     if (output_body_off_ < output_body_.size())
         return true;
@@ -256,23 +254,7 @@ bool CgiHandler::has_output() const
 
 size_t CgiHandler::read_data(char* buf, size_t n)
 {
-    if (forced_response_) {
-        if (headers_parsed_ && !headers_sent_) {
-            size_t remain = headers_.size() - headers_off_;
-            size_t to_copy = std::min(remain, n);
-
-            memcpy(buf, headers_.data() + headers_off_, to_copy);
-            headers_off_ += to_copy;
-
-            if (headers_off_ == headers_.size())
-                headers_sent_ = true;
-
-            return to_copy;
-        }
-        return 0;
-    }
-
-    if (headers_parsed_ && !headers_sent_) {
+    if (headers_parsed_ && !headers_sent()) {
         size_t remain = headers_.size() - headers_off_;
         size_t to_copy = std::min(remain, n);
 
@@ -304,13 +286,11 @@ size_t CgiHandler::read_data(char* buf, size_t n)
     ssize_t bytes_read = read(output_fd_[0], tmp, sizeof(tmp));
     LOG(DEBUG) << "bytes_read = " << bytes_read;
     if (bytes_read == 0) {
-        eof_reached_ = true;
-        // eoo_reached_ = true;
-        //  close(output_fd_[0]);
-        //  output_fd_[0] = -1;
-        /*if (!headers_parsed_) {
+        if (!headers_parsed_) {
             set_res_and_quit(HttpResponse::kStatusBadGateway);
-        }*/
+            return 0;
+        }
+        eof_reached_ = true;
     }
     else if (bytes_read < 0) {
         if (errno != EAGAIN && errno != EWOULDBLOCK) {
@@ -336,21 +316,20 @@ size_t CgiHandler::read_data(char* buf, size_t n)
                 std::string remainder = raw_output_.substr(header_end + sep_len);
 
                 HttpResponse res;
-                if (parse_headers(cgi_headers, res) != 0) {
+                if (parse_headers(cgi_headers, res) != true) {
                     set_res_and_quit(HttpResponse::kStatusBadGateway);
+                    return (0);
                 }
                 else {
                     // Build real HTTP headers (your to_string should include content-type, etc.)
-                    headers_.append(res.to_string());
+                    headers_ = res.to_string();
+                    headers_parsed_ = true;
+                    headers_sent_ = false;
+                    headers_off_ = 0;
+
+                    // Buffer any bytes that were already part of body
+                    output_body_.append(remainder);
                 }
-
-                headers_parsed_ = true;
-                headers_sent_ = false;
-                headers_off_ = 0;
-
-                // Buffer any bytes that were already part of body
-                output_body_.append(remainder);
-
                 // Clear raw buffer (we don't need it anymore once headers are parsed)
                 raw_output_.clear();
             }
@@ -365,7 +344,7 @@ size_t CgiHandler::read_data(char* buf, size_t n)
     return 0;
 }
 
-int CgiHandler::parse_headers(std::string& cgi_headers, HttpResponse& res)
+bool CgiHandler::parse_headers(std::string& cgi_headers, HttpResponse& res)
 {
     int status_code = 200;                           // = default
     size_t pos_status = cgi_headers.find("Status:"); // extract Status
@@ -388,7 +367,7 @@ int CgiHandler::parse_headers(std::string& cgi_headers, HttpResponse& res)
     }
     // CGI spec: missing Content-Type → error
     if (content_type.empty()) {
-        return 1;
+        return false;
     }
 
     int content_length = 0;
@@ -406,5 +385,5 @@ int CgiHandler::parse_headers(std::string& cgi_headers, HttpResponse& res)
         res.content_length = content_length;
     };
     // LOG(DEBUG) << res.to_string();
-    return (0);
+    return (true);
 }
