@@ -53,7 +53,7 @@ private:
     void set_res_and_quit(HttpResponse::Status status);
     std::vector<std::string> build_env_strings() const;
     bool child_reaped(void) const;
-    int parse_headers(std::string& cgi_headers, HttpResponse& res);
+    bool parse_headers(std::string& cgi_headers, HttpResponse& res);
     bool headers_sent() const { return headers_off_ == headers_.size(); }
 
     const std::string path_;
