@@ -15,12 +15,10 @@
 
 static void config_error(const std::string& msg, int line = -1)
 {
-    if (line != -1) {
-        throw std::runtime_error(msg + " (line " + itoa(line) + ")");
-    }
-    else {
+    if (line == -1)
         throw std::runtime_error(msg);
-    }
+
+    throw std::runtime_error(msg + " (line " + itoa(line) + ")");
 }
 
 static void expect_argc(const AstNode& node, size_t count)

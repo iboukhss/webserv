@@ -1,3 +1,5 @@
+#include "util/string.hpp"
+
 #include <sstream>
 #include <string>
 

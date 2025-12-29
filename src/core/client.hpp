@@ -36,9 +36,7 @@ private:
 
 private:
     Client::State state_;
-    uint64_t id_;
     int fd_;
-    sockaddr_in addr_;
     std::string send_buffer_;
     HttpParser parser_;
     Handler* handler_;

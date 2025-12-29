@@ -45,10 +45,12 @@ static std::string resolve_path(const std::string& path,
 static const char* derive_file_type(const std::string& file_path)
 {
     size_t pos = file_path.rfind(".");
+
     if (pos == std::string::npos)
         return ("application/octet-stream");
 
     std::string ext = file_path.substr(pos + 1);
+
     if (ext == "html" || ext == "htm")
         return "text/html; charset=UTF-8";
     if (ext == "txt")

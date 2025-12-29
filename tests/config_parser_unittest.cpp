@@ -67,7 +67,7 @@ UTEST(ConfigParserTest, SingleStatement)
     std::vector<AstNode> nodes = parser.parse_tokens();
     ASSERT_EQ(1u, nodes.size());
 
-    const AstNode statement = nodes[0];
+    const AstNode& statement = nodes[0];
     EXPECT_STREQ("listen", statement.name.c_str());
     ASSERT_EQ(1u, statement.args.size());
     EXPECT_STREQ("8080", statement.args[0].c_str());
@@ -86,7 +86,7 @@ UTEST(ConfigParserTest, SingleBlock)
     std::vector<AstNode> nodes = parser.parse_tokens();
     ASSERT_EQ(1u, nodes.size());
 
-    const AstNode block = nodes[0];
+    const AstNode& block = nodes[0];
     EXPECT_STREQ("server", block.name.c_str());
     ASSERT_EQ(0u, block.args.size());
     ASSERT_EQ(0u, block.children.size());
@@ -108,13 +108,13 @@ UTEST(ConfigParserTest, NestedBlockAndStatement)
     std::vector<AstNode> nodes = parser.parse_tokens();
     ASSERT_EQ(1u, nodes.size());
 
-    const AstNode block = nodes[0];
+    const AstNode& block = nodes[0];
     EXPECT_STREQ("server", block.name.c_str());
     ASSERT_EQ(0u, block.args.size());
     ASSERT_EQ(1u, block.children.size());
     EXPECT_EQ(1, block.line);
 
-    const AstNode statement = block.children[0];
+    const AstNode& statement = block.children[0];
     EXPECT_STREQ("listen", statement.name.c_str());
     ASSERT_EQ(1u, statement.args.size());
     EXPECT_STREQ("8080", statement.args[0].c_str());
