@@ -43,7 +43,7 @@ static size_t prefix_length(const std::string& request_path, const std::string& 
 }
 
 // for the moment it takes some static input
-const RouteConfig& Router::find_best_route(const std::string& request_path)
+const RouteConfig& Router::find_best_route(const std::string& request_path) const
 {
     assert(!routes_.empty() && "There must always be at least one default location");
     assert(routes_.count("/") == 1 && "Default route path is not '/'");
@@ -118,7 +118,7 @@ static std::string build_request_path(const HttpRequest& request, const RouteCon
 // Parser does not allow empty URI (invalid format)
 // Parser always checks if URI starts with a / (forward slash)
 
-Handler* Router::handle_request(const HttpRequest& request)
+Handler* Router::handle_request(const HttpRequest& request) const
 {
     assert(!request.path.empty() && "Request URI can never be empty in the router");
 

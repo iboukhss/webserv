@@ -18,6 +18,7 @@ public:
     virtual size_t read_output(char* buf, size_t n);
     virtual size_t write_input(const char* buf, size_t n);
 
+    virtual bool is_regular_file() const { return false; }
     virtual bool has_output() const;
     virtual bool needs_input() const
     {

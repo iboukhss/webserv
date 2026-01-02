@@ -11,8 +11,8 @@ class Router {
 public:
     explicit Router(const std::map<std::string, RouteConfig>& routes);
 
-    Handler* handle_request(const HttpRequest& request);
-    const RouteConfig& find_best_route(const std::string& request_path);
+    Handler* handle_request(const HttpRequest& request) const;
+    const RouteConfig& find_best_route(const std::string& request_path) const;
 
 private:
     const std::map<std::string, RouteConfig>& routes_;

@@ -17,6 +17,7 @@ public:
     virtual size_t read_output(char* buf, size_t n); // we should not read from this handler
     virtual size_t write_input(const char* buf, size_t n);
 
+    virtual bool is_regular_file() const { return true; }
     virtual bool has_output() const { return out_off_ < out_buf_.size(); }
     virtual bool needs_input() const { return bytes_written_ < req_.content_length; }
     virtual bool is_done() const { return out_off_ >= out_buf_.size(); }

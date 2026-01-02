@@ -10,6 +10,7 @@ public:
     virtual size_t read_output(char* buf, size_t n) = 0;
     virtual size_t write_input(const char* buf, size_t n) = 0;
 
+    virtual bool is_regular_file() const = 0;
     virtual bool has_output() const = 0;
     virtual bool needs_input() const = 0;
     virtual bool is_done() const = 0;

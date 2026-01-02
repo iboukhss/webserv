@@ -4,7 +4,7 @@ CONFIG ?= debug
 
 # Compiler settings
 CXX = clang++
-CXXFLAGS = -std=c++98 -Wall -Wextra -Wshadow -Werror
+CXXFLAGS = -std=c++98 -Wall -Wextra -Werror
 CPPFLAGS = -Isrc -Ithird_party/utest -MMD -MP
 
 # Build specific options
@@ -37,6 +37,8 @@ srcs = \
   src/core/server_defaults.hpp \
   src/core/signals.cpp \
   src/core/signals.hpp \
+  src/core/virtual_server.cpp \
+  src/core/virtual_server.hpp \
   src/handler/cgi_handler.cpp \
   src/handler/cgi_handler.hpp \
   src/handler/delete_handler.cpp \
@@ -63,8 +65,6 @@ srcs = \
   src/router/router.cpp \
   src/router/router.hpp \
   src/util/itoa.cpp \
-  src/util/to_string.cpp \
-  src/util/to_string.hpp \
   src/util/log_message.cpp \
   src/util/log_message.hpp \
   src/util/str_split.cpp \
@@ -72,6 +72,8 @@ srcs = \
   src/util/string.hpp \
   src/util/syscall_error.cpp \
   src/util/syscall_error.hpp \
+  src/util/to_string.cpp \
+  src/util/to_string.hpp \
 
 cpps = $(filter %.cpp,$(srcs))
 hpps = $(filter %.hpp,$(srcs))

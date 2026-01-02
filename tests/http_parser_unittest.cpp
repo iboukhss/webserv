@@ -7,7 +7,8 @@ UTEST(HttpParserTest, BasicRequestLine)
     std::string req = "GET /index.html HTTP/1.0\r\n";
 
     p.append_data(req.data(), req.size());
-    ASSERT_TRUE(p.state() == HttpParser::kParsingHeaders);
+    ASSERT_TRUE(p.did_parse_request_line());
+    ASSERT_FALSE(p.is_done());
 
     EXPECT_TRUE(p.request().method == "GET");
     EXPECT_TRUE(p.request().path == "/index.html");
@@ -20,7 +21,8 @@ UTEST(HttpParserTest, RequestWithQueryString)
     std::string req = "GET /search.php?q=foo&user=bar HTTP/1.0\r\n";
 
     p.append_data(req.data(), req.size());
-    ASSERT_TRUE(p.state() == HttpParser::kParsingHeaders);
+    ASSERT_TRUE(p.did_parse_request_line());
+    ASSERT_FALSE(p.is_done());
 
     EXPECT_TRUE(p.request().method == "GET");
     EXPECT_TRUE(p.request().path == "/search.php");
@@ -36,7 +38,8 @@ UTEST(HttpParserTest, FullRequestZeroBody)
                       "\r\n";
 
     p.append_data(req.data(), req.size());
-    ASSERT_TRUE(p.state() == HttpParser::kParsingDone);
+    ASSERT_TRUE(p.did_parse_headers());
+    ASSERT_TRUE(p.is_done());
 
     EXPECT_TRUE(p.request().method == "GET");
     EXPECT_TRUE(p.request().path == "/index.html");
@@ -51,7 +54,7 @@ UTEST(HttpParserTest, InvalidMethod)
     std::string req = "PUT /index.html HTTP/1.0\r\n";
 
     p.append_data(req.data(), req.size());
-    ASSERT_TRUE(p.state() == HttpParser::kParsingError);
+    ASSERT_TRUE(p.has_error());
 }
 
 UTEST(HttpParserTest, ImportantHeaders)
@@ -63,7 +66,8 @@ UTEST(HttpParserTest, ImportantHeaders)
                       "\r\n";
 
     p.append_data(req.data(), req.size());
-    ASSERT_TRUE(p.state() == HttpParser::kParsingBody);
+    ASSERT_TRUE(p.did_parse_headers());
+    ASSERT_FALSE(p.is_done());
 
     EXPECT_TRUE(p.request().method == "GET");
     EXPECT_TRUE(p.request().path == "/index.html");
@@ -80,10 +84,12 @@ UTEST(HttpParserTest, PartialFeed)
     size_t crlf = req.find("\r\n");
 
     p.append_data(req.data(), crlf);
-    ASSERT_TRUE(p.state() == HttpParser::kParsingRequestLine);
+    ASSERT_FALSE(p.did_parse_request_line());
+    ASSERT_FALSE(p.is_done());
 
     p.append_data(req.data() + crlf, 2);
-    ASSERT_TRUE(p.state() == HttpParser::kParsingHeaders);
+    ASSERT_TRUE(p.did_parse_request_line());
+    ASSERT_FALSE(p.is_done());
 
     EXPECT_TRUE(p.request().method == "GET");
     EXPECT_TRUE(p.request().path == "/index.html");
@@ -101,7 +107,9 @@ UTEST(HttpParserTest, ByteByByteFeed)
         p.append_data(&req[i], 1);
     }
 
-    ASSERT_TRUE(p.state() == HttpParser::kParsingDone);
+    ASSERT_TRUE(p.did_parse_headers());
+    ASSERT_TRUE(p.is_done());
+
     EXPECT_TRUE(p.request().method == "GET");
     EXPECT_TRUE(p.request().path == "/index.html");
     EXPECT_TRUE(p.request().http_version == kHttpVersion1_0);
