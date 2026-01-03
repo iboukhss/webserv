@@ -366,68 +366,63 @@ UTEST(CgiHandler, PythonScript_POST_1MB_Payload)
 
 UTEST(Config, Bla_Rejects_Get)
 {
-    ServerConfig cfg = make_youpi_banane_test_config();
+    HttpConfig http = load_http_config("config/youpi_banane.conf");
 
-    ASSERT_TRUE(std::find(cfg.config.cgi.allowed_methods.begin(),
-                          cfg.config.cgi.allowed_methods.end(),
-                          "GET") == cfg.config.cgi.allowed_methods.end());
+    ASSERT_EQ(http.servers.size(), 1u);
+
+    const ServerConfig& cfg = http.servers[0];
+
+    ASSERT_TRUE(std::find(cfg.shared.cgi.allowed_methods.begin(),
+                          cfg.shared.cgi.allowed_methods.end(),
+                          "GET") == cfg.shared.cgi.allowed_methods.end());
 }
 
 UTEST(Config, Bla_Cgi_Exec_Path)
 {
-    ServerConfig cfg = make_youpi_banane_test_config();
-
-    ASSERT_TRUE(cfg.config.cgi.exec_path == "/tests/ubuntu_cgi_tester");
+    HttpConfig http = load_http_config("config/youpi_banane.conf");
+    const ServerConfig& cfg = http.servers[0];
+    ASSERT_TRUE(cfg.shared.cgi.exec_path == "/tests/ubuntu_cgi_tester");
 }
 
 UTEST(Config, PostBody_MaxBody)
 {
-    ServerConfig cfg = make_youpi_banane_test_config();
+    HttpConfig http = load_http_config("config/youpi_banane.conf");
+    const ServerConfig& cfg = http.servers[0];
 
-    const RouteConfig* post = NULL;
-    for (size_t i = 0; i < cfg.locations.size(); ++i) {
-        if (cfg.locations[i].route_path == "/post_body")
-            post = &cfg.locations[i];
-    }
-
-    ASSERT_TRUE(post != NULL);
-    ASSERT_EQ(post->config.max_body_size, 100u);
+    std::map<std::string, RouteConfig>::const_iterator it = cfg.locations.find("/post_body");
+    ASSERT_TRUE(it != cfg.locations.end());
+    ASSERT_EQ(it->second.shared.max_body_size, 100u);
 }
 
 UTEST(Config, Directory_Index)
 {
-    ServerConfig cfg = make_youpi_banane_test_config();
+    HttpConfig http = load_http_config("config/youpi_banane.conf");
+    const ServerConfig& cfg = http.servers[0];
 
-    const RouteConfig* dir = NULL;
-    for (size_t i = 0; i < cfg.locations.size(); ++i) {
-        if (cfg.locations[i].route_path == "/directory/")
-            dir = &cfg.locations[i];
-    }
+    std::map<std::string, RouteConfig>::const_iterator it = cfg.locations.find("/directory/");
+    ASSERT_TRUE(it != cfg.locations.end());
 
-    ASSERT_TRUE(dir != NULL);
-    ASSERT_EQ(dir->config.index_files.size(), 1u);
-    ASSERT_TRUE(dir->config.index_files[0] == "youpi.bad_extension");
+    ASSERT_EQ(it->second.shared.index_files.size(), 1u);
+    ASSERT_TRUE(it->second.shared.index_files[0] == "youpi.bad_extension");
 }
 
 UTEST(Config, Directory_Inherits_Get_Only)
 {
-    ServerConfig cfg = make_youpi_banane_test_config();
+    HttpConfig http = load_http_config("config/youpi_banane.conf");
+    const ServerConfig& cfg = http.servers[0];
 
-    const RouteConfig* dir = NULL;
-    for (size_t i = 0; i < cfg.locations.size(); ++i) {
-        if (cfg.locations[i].route_path == "/directory/")
-            dir = &cfg.locations[i];
-    }
+    std::map<std::string, RouteConfig>::const_iterator it = cfg.locations.find("/directory/");
+    ASSERT_TRUE(it != cfg.locations.end());
 
-    ASSERT_TRUE(dir != NULL);
-    ASSERT_TRUE(std::find(dir->config.allowed_methods.begin(),
-                          dir->config.allowed_methods.end(),
-                          "GET") != dir->config.allowed_methods.end());
+    const RouteConfig& dir = it->second;
+    ASSERT_TRUE(std::find(dir.shared.allowed_methods.begin(),
+                          dir.shared.allowed_methods.end(),
+                          "GET") != dir.shared.allowed_methods.end());
 }
 
 UTEST(CgiHandler, UbuntuCgiTester_GET)
 {
-    UTEST_SKIP("TODO: to implement");
+    // UTEST_SKIP("TODO: to implement");
     HttpRequest req;
     req.method = "GET";
     req.path = "/ubuntu_cgi_tester";
@@ -435,7 +430,7 @@ UTEST(CgiHandler, UbuntuCgiTester_GET)
     req.content_length = 0;
 
     RouteConfig cfg;
-    cfg.config.cgi.exec_path = "";
+    cfg.shared.cgi.exec_path = "";
 
     CgiHandler handler("tests/ubuntu_cgi_tester", req, cfg);
 
@@ -447,13 +442,13 @@ UTEST(CgiHandler, UbuntuCgiTester_GET)
         if (n > 0)
             response.append(buf, n);
     }
-    std::cout << response;
+    // std::cout << response;
     ASSERT_TRUE(response.find("Content-Type") != std::string::npos);
 }
 
 UTEST(CgiHandler, UbuntuCgiTester_POST)
 {
-    UTEST_SKIP("TODO: to implement");
+    // UTEST_SKIP("TODO: to implement");
     const char* body = "hello";
     size_t body_len = strlen(body);
 
@@ -478,7 +473,7 @@ UTEST(CgiHandler, UbuntuCgiTester_POST)
         if (n > 0)
             response.append(buf, n);
     }
-    std::cout << response;
+    // std::cout << response;
     ASSERT_TRUE(response.find("Content-Type") != std::string::npos);
 }
 
@@ -495,9 +490,9 @@ UTEST(CgiHandler, UbuntuCgiTester_ExtensionBased)
     req.content_length = 4;
 
     RouteConfig cfg;
-    cfg.config.cgi.extension = ".bla";
-    cfg.config.cgi.exec_path = "/tests/ubuntu_cgi_tester";
-    cfg.config.cgi.allowed_methods.push_back("POST");
+    cfg.shared.cgi.extension = ".bla";
+    cfg.shared.cgi.exec_path = "/tests/ubuntu_cgi_tester";
+    cfg.shared.cgi.allowed_methods.push_back("POST");
 
     CgiHandler handler(fake_file, req, cfg);
 
@@ -524,7 +519,7 @@ UTEST(CgiHandler, UbuntuCgiTester_MethodNotAllowed)
     req.content_length = 0;
 
     RouteConfig cfg;
-    cfg.config.cgi.allowed_methods.push_back("POST");
+    cfg.shared.cgi.allowed_methods.push_back("POST");
 
     CgiHandler handler(req.path, req, cfg);
 

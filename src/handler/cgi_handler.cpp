@@ -45,7 +45,7 @@ bool CgiHandler::validate_cgi_target(bool is_interpreter_cgi)
     }
     else {
         // Interpreter CGI → interpreter must be executable
-        if (access(config_.config.cgi.exec_path.c_str(), X_OK) != 0) {
+        if (access(config_.shared.cgi.exec_path.c_str(), X_OK) != 0) {
             set_res_and_quit(HttpResponse::kStatusInternalServerError);
             return false;
         }
@@ -105,7 +105,7 @@ void CgiHandler::build_exec_context(char** argv, bool is_interpreter_cgi)
 
     if (is_interpreter_cgi) {
         // Interpreter-based CGI
-        argv[0] = const_cast<char*>(config_.config.cgi.exec_path.c_str());
+        argv[0] = const_cast<char*>(config_.shared.cgi.exec_path.c_str());
         argv[1] = const_cast<char*>(path_.c_str());
         argv[2] = NULL;
     }
@@ -189,7 +189,7 @@ CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request
     init_state();
 
     // STEP 1 - Check that file exisst and is executable
-    bool is_interpreter_cgi = !config_.config.cgi.exec_path.empty();
+    bool is_interpreter_cgi = !config_.shared.cgi.exec_path.empty();
     if (validate_cgi_target(is_interpreter_cgi) != true)
         return;
 
