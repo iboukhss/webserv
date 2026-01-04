@@ -1,6 +1,12 @@
 #include "http/http_response.hpp"
 
+#include "config/server_config.hpp"
+#include "fcntl.h"
+#include "sys/stat.h"
+#include "unistd.h"
+
 #include <cstdlib>
+#include <map>
 #include <sstream>
 
 // TODO(isma): Maybe make a proper constructor for this class?
@@ -106,13 +112,61 @@ std::string HttpResponse::to_string() const
     return out.str();
 }
 
-HttpResponse HttpResponse::make_error(HttpResponse::Status status)
+bool file_readable(const std::string& path)
+{
+    struct stat sb;
+    return (stat(path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode));
+}
+
+bool read_error_page(const std::string& path, std::string& body)
+{
+    if (!file_readable(path)) {
+        return false;
+    }
+
+    int fd;
+    char buf[4096];
+    int bytes = 1;
+    fd = open(path.c_str(), O_RDONLY);
+    if (fd == -1) {
+        return false;
+    }
+
+    while (bytes) {
+        size_t bytes = read(fd, buf, sizeof(buf));
+        if (bytes == 0) {
+            break;
+        }
+        if (bytes < 0) {
+            close(fd);
+            return false;
+        }
+        body.append(buf, bytes);
+    }
+    close(fd);
+    return true;
+}
+
+HttpResponse HttpResponse::make_error(HttpResponse::Status status, const SharedConfig& cfg)
 {
     HttpResponse res(WEBSERV_DEFAULT_HTTP_VERSION);
     res.code = status;
     res.content_type = "text/html; charset=UTF-8";
-    std::ostringstream oss;
-    oss << static_cast<int>(status) << " " << HttpResponse::reason_phrase(status);
+    std::map<HttpResponse::Status, std::string>::const_iterator it = cfg.error_pages.find(status);
+    if (it != cfg.error_pages.end()) {
+        std::string path = cfg.document_root + it->second;
+        std::string body;
+        if (read_error_page(path, body)) {
+            res.inline_body = body;
+            return res;
+        }
+    }
+    int code = static_cast<int>(status);
+    std::ostringstream oss; // send a minimal default html body containing the error status code
+    oss << "<!doctype html><html><head><meta charset=\"utf-8\">"
+           "<title>"
+        << code << " " << HttpResponse::reason_phrase(status) << "</title></head><body><h1>" << code
+        << " " << HttpResponse::reason_phrase(status) << "</h1></body></html>";
     res.inline_body = oss.str();
     return res;
 }
