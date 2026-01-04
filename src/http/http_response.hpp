@@ -28,7 +28,7 @@ public:
 
     explicit HttpResponse(HttpVersion protocol = WEBSERV_DEFAULT_HTTP_VERSION);
     static Status status_from_int(int code);
-    static HttpResponse make_error(HttpResponse::Status status);
+    static HttpResponse make_error(HttpResponse::Status status, const SharedConfig& cfg);
     HttpVersion http_version;
     HttpResponse::Status code;
 
