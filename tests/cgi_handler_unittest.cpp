@@ -154,7 +154,7 @@ UTEST(CgiHandler, MissingContentType)
         if (n > 0)
             response.append(buf, n);
     }
-    HttpResponse res = res.make_error(HttpResponse::kStatusBadGateway);
+    HttpResponse res = res.make_error(HttpResponse::kStatusBadGateway, cfg.shared.error_pages);
     std::string expected = res.to_string();
     // print_response_expected(response, expected);
     ASSERT_TRUE(response == expected);
@@ -201,7 +201,7 @@ UTEST(CgiHandler, NotExecutable)
         if (n > 0)
             response.append(buf, n);
     }
-    HttpResponse res = res.make_error(HttpResponse::kStatusForbidden);
+    HttpResponse res = res.make_error(HttpResponse::kStatusForbidden, cfg.shared.error_pages);
     std::string expected = res.to_string();
     // print_response_expected(response, expected);
     ASSERT_TRUE(response == expected);
