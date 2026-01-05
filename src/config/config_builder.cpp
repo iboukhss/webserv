@@ -269,7 +269,7 @@ static bool read_error_page(const std::string& path, std::string& error_page_con
         return false;
     }
 
-    int fd;
+    int fd = 0;
     char buf[4096];
     ssize_t bytes = 1;
     fd = open(path.c_str(), O_RDONLY);
@@ -298,7 +298,7 @@ static void parse_error_pages(const AstNode& node, SharedConfig& config)
 
     const std::string& url = node.args.back();
 
-    for (size_t i = 0; i < node.args.size() - 1; i++) {
+    for (size_t i = 0; i < node.args.size() - 1; ++i) {
         HttpResponse::Status status = HttpResponse::parse_status(node.args[i]);
 
         if (status == HttpResponse::kStatusNone)
