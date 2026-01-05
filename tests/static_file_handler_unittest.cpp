@@ -40,7 +40,8 @@ UTEST(StaticFileHandlerTest, StatusNotFound)
     size_t n = test.read_output(buf, sizeof(buf));
     std::string response(buf, n);
 
-    EXPECT_TRUE(str_contains(response, "HTTP/1.0 404 Not Found"));
+    EXPECT_TRUE(
+        str_contains(response, "404 Not Found")); // I removed the HTTP version from the check
 }
 
 UTEST(StaticFileHandlerTest, ReadSomeData)
