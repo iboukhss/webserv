@@ -77,7 +77,8 @@ StaticFileHandler::StaticFileHandler(const std::string& path,
     : fd_(-1),
       file_size_(0),
       eof_reached_(false),
-      headers_off_(0)
+      headers_off_(0),
+      rc_(rc)
 {
     HttpResponse res(saved_request.http_version);
 
@@ -88,10 +89,11 @@ StaticFileHandler::StaticFileHandler(const std::string& path,
 
     if (full_path.empty()) {
         LOG(ERROR) << "Couldn't open file " << path;
-        res.code = HttpResponse::kStatusNotFound;
+        /*res.code = HttpResponse::kStatusNotFound;
         res.content_type = "text/html; charset=UTF-8"; // Magic to display emojis
-        res.inline_body = "<h1>404 Not Found 😢</h1>\n";
-        headers_ = res.to_string();
+        res.inline_body = "<h1>404 Not Found 😢</h1>\n";*/
+        headers_ = HttpResponse::make_error(HttpResponse::kStatusNotFound, rc_.shared.error_pages)
+                       .to_string();
         return;
     }
 

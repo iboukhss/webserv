@@ -40,6 +40,7 @@ private:
     bool eof_reached_;
     std::string headers_;
     size_t headers_off_;
+    const RouteConfig& rc_;
 };
 
 #endif

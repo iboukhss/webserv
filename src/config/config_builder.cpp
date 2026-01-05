@@ -3,7 +3,12 @@
 #include "config/config_parser.hpp"
 #include "config/server_config.hpp"
 #include "http/http_response.hpp"
+#include "util/log_message.hpp"
 #include "util/string.hpp"
+
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <cstdlib>
 #include <stdexcept>
@@ -251,6 +256,42 @@ static void parse_client_max_body_size(const AstNode& node, SharedConfig& config
     config.max_body_size = size;
 }
 
+static bool file_readable(const std::string& path)
+{
+    struct stat sb;
+    return (stat(path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode));
+}
+
+static bool read_error_page(const std::string& path, std::string& error_page_content)
+{
+    if (!file_readable(path)) {
+        LOG(DEBUG) << "error page not readable : " << path;
+        return false;
+    }
+
+    int fd;
+    char buf[4096];
+    ssize_t bytes = 1;
+    fd = open(path.c_str(), O_RDONLY);
+    if (fd == -1) {
+        return false;
+    }
+
+    while (bytes) {
+        bytes = read(fd, buf, sizeof(buf));
+        if (bytes == 0) {
+            break;
+        }
+        if (bytes < 0) {
+            close(fd);
+            return false;
+        }
+        error_page_content.append(buf, bytes);
+    }
+    close(fd);
+    return true;
+}
+
 static void parse_error_pages(const AstNode& node, SharedConfig& config)
 {
     expect_min_argc(node, 2);
@@ -263,7 +304,14 @@ static void parse_error_pages(const AstNode& node, SharedConfig& config)
         if (status == HttpResponse::kStatusNone)
             config_error("'error_page' unsupported status code '" + node.args[i] + "'", node.line);
 
-        config.error_pages[status] = url;
+        std::string error_page;
+        std::string path =
+            config.document_root +
+            url; // potentially unsave ? if file cannot be loaded, default error pages are used
+        if (read_error_page(path, error_page) == true) {
+            LOG(DEBUG) << "ERROR page loaded : " << status << " " << url;
+            config.error_pages[status] = error_page;
+        }
     }
 }
 
