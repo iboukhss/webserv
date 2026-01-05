@@ -4,6 +4,7 @@
 #include "core/server_defaults.hpp"
 #include "http/http_version.hpp"
 
+#include <map>
 #include <string>
 
 struct HttpResponse {
@@ -28,7 +29,8 @@ public:
 
     explicit HttpResponse(HttpVersion protocol = WEBSERV_DEFAULT_HTTP_VERSION);
     static Status status_from_int(int code);
-    static HttpResponse make_error(HttpResponse::Status status, const SharedConfig& cfg);
+    static HttpResponse make_error(HttpResponse::Status status,
+                                   const std::map<HttpResponse::Status, std::string>& error_pages);
     HttpVersion http_version;
     HttpResponse::Status code;
 

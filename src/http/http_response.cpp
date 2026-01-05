@@ -1,6 +1,5 @@
 #include "http/http_response.hpp"
 
-#include "config/server_config.hpp"
 #include "fcntl.h"
 #include "sys/stat.h"
 #include "unistd.h"
@@ -112,54 +111,17 @@ std::string HttpResponse::to_string() const
     return out.str();
 }
 
-bool file_readable(const std::string& path)
-{
-    struct stat sb;
-    return (stat(path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode));
-}
-
-bool read_error_page(const std::string& path, std::string& body)
-{
-    if (!file_readable(path)) {
-        return false;
-    }
-
-    int fd;
-    char buf[4096];
-    int bytes = 1;
-    fd = open(path.c_str(), O_RDONLY);
-    if (fd == -1) {
-        return false;
-    }
-
-    while (bytes) {
-        size_t bytes = read(fd, buf, sizeof(buf));
-        if (bytes == 0) {
-            break;
-        }
-        if (bytes < 0) {
-            close(fd);
-            return false;
-        }
-        body.append(buf, bytes);
-    }
-    close(fd);
-    return true;
-}
-
-HttpResponse HttpResponse::make_error(HttpResponse::Status status, const SharedConfig& cfg)
+HttpResponse
+HttpResponse::make_error(HttpResponse::Status status,
+                         const std::map<HttpResponse::Status, std::string>& error_pages)
 {
     HttpResponse res(WEBSERV_DEFAULT_HTTP_VERSION);
     res.code = status;
     res.content_type = "text/html; charset=UTF-8";
-    std::map<HttpResponse::Status, std::string>::const_iterator it = cfg.error_pages.find(status);
-    if (it != cfg.error_pages.end()) {
-        std::string path = cfg.document_root + it->second;
-        std::string body;
-        if (read_error_page(path, body)) {
-            res.inline_body = body;
-            return res;
-        }
+    std::map<HttpResponse::Status, std::string>::const_iterator it = error_pages.find(status);
+    if (it != error_pages.end()) {
+        res.inline_body = it->second;
+        return res;
     }
     int code = static_cast<int>(status);
     std::ostringstream oss; // send a minimal default html body containing the error status code

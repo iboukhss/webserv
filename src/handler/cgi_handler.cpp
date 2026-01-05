@@ -219,7 +219,7 @@ CgiHandler::~CgiHandler()
 
 void CgiHandler::set_res_and_quit(HttpResponse::Status status)
 {
-    headers_ = HttpResponse::make_error(status).to_string();
+    headers_ = HttpResponse::make_error(status, config_.shared.error_pages).to_string();
     headers_parsed_ = true;
     headers_sent_ = false;
     headers_off_ = 0;
