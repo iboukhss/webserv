@@ -70,7 +70,7 @@ bool UploadHandler::has_output() const
     return headers_off_ < headers_.size();
 }
 
-size_t UploadHandler::read_data(char* buf, size_t n)
+size_t UploadHandler::read_output(char* buf, size_t n)
 {
     // LOG(DEBUG) << "inside UploadHandler::read_data -> headers_.size == " << headers_.size();
     size_t to_copy = std::min(headers_.size() - headers_off_, n);
@@ -79,7 +79,7 @@ size_t UploadHandler::read_data(char* buf, size_t n)
     return (to_copy);
 }
 
-size_t UploadHandler::write_data(const char* buf, size_t n)
+size_t UploadHandler::write_input(const char* buf, size_t n)
 {
     ssize_t bytes = write(fd_, buf, n);
     if (bytes == -1) {

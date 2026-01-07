@@ -12,8 +12,8 @@ public:
     explicit DeleteHandler(const std::string& path);
     virtual ~DeleteHandler();
 
-    virtual size_t read_data(char* buf, size_t n);
-    virtual size_t write_data(const char* buf, size_t n);
+    virtual size_t read_output(char* buf, size_t n);
+    virtual size_t write_input(const char* buf, size_t n);
 
     virtual bool has_output() const { return !headers_sent(); }
     virtual bool needs_input() const { return false; };

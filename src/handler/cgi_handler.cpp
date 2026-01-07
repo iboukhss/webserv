@@ -250,7 +250,7 @@ bool CgiHandler::child_reaped(void) const
     return false;
 }
 
-size_t CgiHandler::write_data(const char* buf, size_t n)
+size_t CgiHandler::write_input(const char* buf, size_t n)
 {
     ssize_t bytes = write(input_fd_[1], buf, n);
     if (bytes < 0) {
@@ -281,7 +281,7 @@ bool CgiHandler::has_output() const
     return false;
 }
 
-size_t CgiHandler::read_data(char* buf, size_t n)
+size_t CgiHandler::read_output(char* buf, size_t n)
 {
     if (headers_parsed_ && !headers_sent()) {
         size_t remain = headers_.size() - headers_off_;

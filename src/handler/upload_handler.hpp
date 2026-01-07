@@ -12,8 +12,8 @@ public:
     explicit UploadHandler(const std::string& path, size_t content_lenght);
     virtual ~UploadHandler();
 
-    virtual size_t read_data(char* buf, size_t n); // we should not read from this handler
-    virtual size_t write_data(const char* buf, size_t n);
+    virtual size_t read_output(char* buf, size_t n); // we should not read from this handler
+    virtual size_t write_input(const char* buf, size_t n);
 
     virtual bool has_output() const;
     virtual bool needs_input() const;
