@@ -246,7 +246,7 @@ void Server::read_from_socket(Client& conn)
     if (conn.state() == Client::kReceivingBody) {
         size_t n = 0;
         while ((n = parser.read_body_chunk(tmp, sizeof(tmp))) > 0) {
-            conn.handler()->write_data(tmp, n);
+            conn.handler()->write_input(tmp, n);
         }
         if (conn.handler()->has_output()) {
             conn.set_state(Client::kSendingResponse);
@@ -266,7 +266,7 @@ void Server::write_to_socket(Client& conn)
     std::string& send_buffer = conn.send_buffer();
 
     if (handler.has_output()) {
-        size_t n = handler.read_data(tmp, sizeof(tmp));
+        size_t n = handler.read_output(tmp, sizeof(tmp));
         send_buffer.append(tmp, n);
     }
     if (!send_buffer.empty()) {

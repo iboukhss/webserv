@@ -10,7 +10,7 @@ static void write_all(Handler* handler, const std::string& content)
     size_t written = 0;
 
     while (handler->needs_input()) {
-        size_t n = handler->write_data(content.c_str() + written, content.size() - written);
+        size_t n = handler->write_input(content.c_str() + written, content.size() - written);
         written += n;
 
         if ((n == 0 && handler->needs_input()))
@@ -23,7 +23,7 @@ UTEST(DeleteHandlerTest, file_not_found)
     std::string file_path = "www/example/delete_testing/file_not_found.txt";
     DeleteHandler handler(file_path);
     char buffer[1028];
-    size_t n = handler.read_data(buffer, sizeof(buffer));
+    size_t n = handler.read_output(buffer, sizeof(buffer));
     std::string http_res(buffer, n);
     ASSERT_TRUE(http_res.find("404") != std::string::npos);
 }
@@ -38,7 +38,7 @@ UTEST(DeleteHandlerTest, file_deleted_no_content)
     }
     DeleteHandler handler(file_path);
     char buffer[1028];
-    size_t n = handler.read_data(buffer, sizeof(buffer));
+    size_t n = handler.read_output(buffer, sizeof(buffer));
     std::string http_res(buffer, n);
     ASSERT_TRUE(http_res.find("204") != std::string::npos);
 }
@@ -53,7 +53,7 @@ UTEST(DeleteHandlerTest, file_deleted)
     }
     DeleteHandler handler(file_path);
     char buffer[1028];
-    size_t n = handler.read_data(buffer, sizeof(buffer));
+    size_t n = handler.read_output(buffer, sizeof(buffer));
     std::string http_res(buffer, n);
     ASSERT_TRUE(http_res.find("200") != std::string::npos);
 }

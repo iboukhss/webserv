@@ -115,7 +115,7 @@ StaticFileHandler::~StaticFileHandler()
         close(fd_);
 }
 
-size_t StaticFileHandler::read_data(char* buf, size_t n)
+size_t StaticFileHandler::read_output(char* buf, size_t n)
 {
     size_t bytes_written = 0;
 
@@ -146,7 +146,7 @@ size_t StaticFileHandler::read_data(char* buf, size_t n)
 }
 
 // We never write to this handler (read-only)
-size_t StaticFileHandler::write_data(const char* buf, size_t n)
+size_t StaticFileHandler::write_input(const char* buf, size_t n)
 {
     (void) buf;
     (void) n;

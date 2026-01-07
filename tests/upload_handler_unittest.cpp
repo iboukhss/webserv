@@ -8,7 +8,7 @@ static void write_all(Handler& handler, const std::string& content)
     size_t written = 0;
 
     while (handler.needs_input()) {
-        size_t n = handler.write_data(content.c_str() + written, content.size() - written);
+        size_t n = handler.write_input(content.c_str() + written, content.size() - written);
         written += n;
 
         if ((n == 0 && handler.needs_input()))
@@ -83,7 +83,7 @@ UTEST(UploadHandlerTest, ReturnsUploadSuccess)
     write_all(handler, content);
     ASSERT_TRUE(handler.has_output());
     char buffer[1028];
-    size_t n = handler.read_data(buffer, sizeof(buffer));
+    size_t n = handler.read_output(buffer, sizeof(buffer));
     std::string http_res(buffer, n);
     ASSERT_TRUE(http_res.find("201") != std::string::npos);
     std::remove(upload_path.c_str());
@@ -101,7 +101,7 @@ UTEST(UploadHandlerTest, ReturnsFileAlreadyExists)
     UploadHandler handler2(upload_path, content.size());
     ASSERT_TRUE(handler2.has_output());
     char buffer[1028];
-    size_t n = handler2.read_data(buffer, sizeof(buffer));
+    size_t n = handler2.read_output(buffer, sizeof(buffer));
     std::string http_res(buffer, n);
     ASSERT_TRUE(http_res.find("409") != std::string::npos);
     std::remove(upload_path.c_str());
