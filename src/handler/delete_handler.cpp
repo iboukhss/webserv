@@ -54,7 +54,7 @@ DeleteHandler::~DeleteHandler()
 {
 }
 
-size_t DeleteHandler::read_data(char* buf, size_t n)
+size_t DeleteHandler::read_output(char* buf, size_t n)
 {
     size_t to_copy = std::min(headers_.size() - headers_off_, n);
     std::memcpy(buf, headers_.c_str() + headers_off_, to_copy);
@@ -63,7 +63,7 @@ size_t DeleteHandler::read_data(char* buf, size_t n)
 }
 
 // We never write to this handler (read-only)
-size_t DeleteHandler::write_data(const char* buf, size_t n)
+size_t DeleteHandler::write_input(const char* buf, size_t n)
 {
     (void) buf;
     (void) n;

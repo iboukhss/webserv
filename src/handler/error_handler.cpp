@@ -5,7 +5,7 @@
 #include <cstring>
 #include <iostream>
 
-size_t ErrorHandler::read_data(char* buf, size_t n)
+size_t ErrorHandler::read_output(char* buf, size_t n)
 {
     std::string res = res_.to_string();
     LOG(DEBUG) << res;
@@ -15,7 +15,7 @@ size_t ErrorHandler::read_data(char* buf, size_t n)
 }
 
 // We never write to this handler (read-only)
-size_t ErrorHandler::write_data(const char* buf, size_t n)
+size_t ErrorHandler::write_input(const char* buf, size_t n)
 {
     (void) buf;
     (void) n;

@@ -74,7 +74,7 @@ UTEST(CgiHandler, SimpleGet)
     char buf[1024];
     std::string response;
     while (!handler.is_done()) {
-        size_t n = handler.read_data(buf, sizeof(buf));
+        size_t n = handler.read_output(buf, sizeof(buf));
         if (n > 0)
             response.append(buf, n);
     }
@@ -108,14 +108,14 @@ UTEST(CgiHandler, PostBody)
     CgiHandler handler(script.path(), req, cfg);
 
     while (handler.needs_input()) {
-        handler.write_data(body, req.content_length);
+        handler.write_input(body, req.content_length);
     }
 
     char buf[1024];
     std::string response;
 
     while (!handler.is_done()) {
-        size_t n = handler.read_data(buf, sizeof(buf));
+        size_t n = handler.read_output(buf, sizeof(buf));
         if (n > 0)
             response.append(buf, n);
     }
@@ -150,7 +150,7 @@ UTEST(CgiHandler, MissingContentType)
     std::string response;
 
     while (!handler.is_done()) {
-        size_t n = handler.read_data(buf, sizeof(buf));
+        size_t n = handler.read_output(buf, sizeof(buf));
         if (n > 0)
             response.append(buf, n);
     }
@@ -197,7 +197,7 @@ UTEST(CgiHandler, NotExecutable)
     std::string response;
 
     while (!handler.is_done()) {
-        size_t n = handler.read_data(buf, sizeof(buf));
+        size_t n = handler.read_output(buf, sizeof(buf));
         if (n > 0)
             response.append(buf, n);
     }
@@ -225,7 +225,7 @@ UTEST(CgiHandler, EmptyOutput)
     size_t n = 0;
     std::string response;
     while (!handler.is_done()) {
-        n = handler.read_data(buf, sizeof(buf));
+        n = handler.read_output(buf, sizeof(buf));
         if (n > 0)
             response.append(buf, n);
     }
@@ -256,7 +256,7 @@ UTEST(CgiHandler, PythonScript_GET)
     std::string response;
 
     while (!handler.is_done()) {
-        size_t n = handler.read_data(buf, sizeof(buf));
+        size_t n = handler.read_output(buf, sizeof(buf));
         if (n > 0)
             response.append(buf, n);
     }
@@ -291,14 +291,14 @@ UTEST(CgiHandler, PythonScript_POST)
 
     // Write POST body
     while (handler.needs_input()) {
-        handler.write_data(body, body_len);
+        handler.write_input(body, body_len);
     }
 
     char buf[1024];
     std::string response;
 
     while (!handler.is_done()) {
-        size_t n = handler.read_data(buf, sizeof(buf));
+        size_t n = handler.read_output(buf, sizeof(buf));
         if (n > 0)
             response.append(buf, n);
     }
@@ -337,7 +337,7 @@ UTEST(CgiHandler, PythonScript_POST_1MB_Payload)
     size_t written = 0;
     while (handler.needs_input()) {
         size_t chunk = body_len - written;
-        size_t n = handler.write_data(body.data() + written, chunk);
+        size_t n = handler.write_input(body.data() + written, chunk);
         written += n;
     }
 
@@ -347,7 +347,7 @@ UTEST(CgiHandler, PythonScript_POST_1MB_Payload)
     std::string response;
 
     while (!handler.is_done()) {
-        size_t n = handler.read_data(buf, sizeof(buf));
+        size_t n = handler.read_output(buf, sizeof(buf));
         if (n > 0)
             response.append(buf, n);
     }
@@ -438,7 +438,7 @@ UTEST(CgiHandler, UbuntuCgiTester_GET)
     std::string response;
 
     while (!handler.is_done()) {
-        size_t n = handler.read_data(buf, sizeof(buf));
+        size_t n = handler.read_output(buf, sizeof(buf));
         if (n > 0)
             response.append(buf, n);
     }
@@ -463,13 +463,13 @@ UTEST(CgiHandler, UbuntuCgiTester_POST)
     CgiHandler handler("tests/ubuntu_cgi_tester", req, cfg);
 
     while (handler.needs_input())
-        handler.write_data(body, body_len);
+        handler.write_input(body, body_len);
 
     char buf[1024];
     std::string response;
 
     while (!handler.is_done()) {
-        size_t n = handler.read_data(buf, sizeof(buf));
+        size_t n = handler.read_output(buf, sizeof(buf));
         if (n > 0)
             response.append(buf, n);
     }
@@ -496,13 +496,13 @@ UTEST(CgiHandler, UbuntuCgiTester_ExtensionBased)
 
     CgiHandler handler(fake_file, req, cfg);
 
-    handler.write_data("test", 4);
+    handler.write_input("test", 4);
 
     char buf[1024];
     std::string response;
 
     while (!handler.is_done()) {
-        size_t n = handler.read_data(buf, sizeof(buf));
+        size_t n = handler.read_output(buf, sizeof(buf));
         if (n > 0)
             response.append(buf, n);
     }
@@ -527,7 +527,7 @@ UTEST(CgiHandler, UbuntuCgiTester_MethodNotAllowed)
     std::string response;
 
     while (!handler.is_done()) {
-        size_t n = handler.read_data(buf, sizeof(buf));
+        size_t n = handler.read_output(buf, sizeof(buf));
         if (n > 0)
             response.append(buf, n);
     }
@@ -559,7 +559,7 @@ UTEST(CgiHandler, UbuntuCgiTester_NotExecutable)
     std::string response;
 
     while (!handler.is_done()) {
-        size_t n = handler.read_data(buf, sizeof(buf));
+        size_t n = handler.read_output(buf, sizeof(buf));
         if (n > 0)
             response.append(buf, n);
     }

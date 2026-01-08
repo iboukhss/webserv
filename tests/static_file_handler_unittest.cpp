@@ -21,7 +21,7 @@ UTEST(StaticFileHandlerTest, StatusOk)
     StaticFileHandler test("www/example/index.html", dummy_config, dummy_request);
 
     char buf[4096] = {0};
-    size_t n = test.read_data(buf, sizeof(buf));
+    size_t n = test.read_output(buf, sizeof(buf));
     std::string response(buf, n);
 
     EXPECT_TRUE(str_contains(response, "HTTP/1.0 200 OK"));
@@ -37,7 +37,7 @@ UTEST(StaticFileHandlerTest, StatusNotFound)
     StaticFileHandler test("www/example/inexistant.html", dummy_config, dummy_request);
 
     char buf[4096] = {0};
-    size_t n = test.read_data(buf, sizeof(buf));
+    size_t n = test.read_output(buf, sizeof(buf));
     std::string response(buf, n);
 
     EXPECT_TRUE(
@@ -54,7 +54,7 @@ UTEST(StaticFileHandlerTest, ReadSomeData)
 
     EXPECT_TRUE(test.has_output());
     EXPECT_FALSE(test.needs_input());
-    ASSERT_TRUE(test.read_data(buf, sizeof(buf)));
+    ASSERT_TRUE(test.read_output(buf, sizeof(buf)));
 }
 
 UTEST(StaticFileHandlerTest, WriteNoData)
@@ -66,7 +66,7 @@ UTEST(StaticFileHandlerTest, WriteNoData)
 
     EXPECT_TRUE(test.has_output());
     EXPECT_FALSE(test.needs_input());
-    ASSERT_FALSE(test.write_data(msg, sizeof(msg)));
+    ASSERT_FALSE(test.write_input(msg, sizeof(msg)));
 }
 
 UTEST(StaticFileHandlerTest, SmallBuffer)
@@ -78,7 +78,7 @@ UTEST(StaticFileHandlerTest, SmallBuffer)
     char buf[1] = {0};
     std::string response;
 
-    while (test.read_data(buf, sizeof(buf)) > 0) {
+    while (test.read_output(buf, sizeof(buf)) > 0) {
         response.append(buf, 1);
     }
 
