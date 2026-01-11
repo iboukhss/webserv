@@ -11,18 +11,18 @@
 
 class StaticFileHandler : public Handler {
 public:
-    StaticFileHandler(const std::string& path,
-                      const RouteConfig& rc,
-                      const HttpRequest& saved_request);
+    StaticFileHandler(const std::string& path, const RouteConfig& rc);
 
     virtual ~StaticFileHandler();
 
     virtual size_t read_output(char* buf, size_t n);
     virtual size_t write_input(const char* buf, size_t n);
 
-    virtual bool has_output() const { return !headers_sent() || (has_body() && !body_sent()); }
+    virtual bool has_output() const { return out_off_ < out_buf_.size() || fd_ != -1; }
     virtual bool needs_input() const { return false; };
-    virtual bool is_done() const { return !has_output(); }
+    virtual bool is_done() const { return out_off_ >= out_buf_.size() && fd_ == -1; }
+
+    void set_error(const HttpResponse::Status code, const RouteConfig& rc);
 
     virtual int cgi_read_fd() const { return -1; };
     virtual int cgi_write_fd() const { return -1; };
@@ -31,16 +31,14 @@ private:
     StaticFileHandler(const StaticFileHandler&);
     StaticFileHandler& operator=(const StaticFileHandler&);
 
-    bool has_body() const { return fd_ != -1; }
-    bool headers_sent() const { return headers_off_ == headers_.size(); }
-    bool body_sent() const { return eof_reached_; }
-
     int fd_;
-    off_t file_size_;
-    bool eof_reached_;
-    std::string headers_;
-    size_t headers_off_;
     const RouteConfig& rc_;
+    off_t file_size_;
+
+    HttpResponse res_;
+
+    std::string out_buf_;
+    size_t out_off_;
 };
 
 #endif

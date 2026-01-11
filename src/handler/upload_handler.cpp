@@ -12,44 +12,28 @@
 #include <iostream>
 #include <sstream>
 
-/*
-ERRORS :
-insufficient space → 507 Insufficient Storage
+void UploadHandler::set_error(const HttpResponse::Status code, const RouteConfig& rc)
+{
+    res_ = HttpResponse::make_error(code, rc.shared.error_pages);
+    out_buf_ = res_.to_string();
+}
 
-forbidden directory → 403
-
-invalid request format → 400
-
-If file exists → POST = 409 Conflict
-
-
-Also, the UploadHandler could handle, both POST and PUT requests
-
-*/
-
-UploadHandler::UploadHandler(const std::string& path, size_t content_length)
-    : file_path_(path),
-      fd_(-1),
+UploadHandler::UploadHandler(const std::string& path, const RouteConfig& rc, size_t content_length)
+    : fd_(-1),
+      rc_(rc),
       bytes_written_(0),
       content_length_(content_length),
-      eob_reached_(false),
-      headers_off_(0)
+      out_off_(0)
 {
     struct stat file_stat;
     if (stat(path.c_str(), &file_stat) == 0 && S_ISREG(file_stat.st_mode)) {
-        // file already exists
-        HttpResponse res;
-        res.code = HttpResponse::kStatusConflict; // 409
-        res.inline_body = "<h1> 409 Conflict — File already exists </h1>";
-        headers_ = res.to_string();
+        set_error(HttpResponse::kStatusConflict, rc); // file already exists
         return;
     }
     fd_ = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd_ == -1) {
-        HttpResponse res;
-        res.code = HttpResponse::kStatusDiskFull;
-        res.inline_body = "<h1> 507 Disk Full </h1>"; // to display a message during testing
-        headers_ = res.to_string();
+        set_error(HttpResponse::kStatusConflict,
+                  rc); // file could not be truncated
         return;
     }
 }
@@ -60,52 +44,35 @@ UploadHandler::~UploadHandler()
         close(fd_);
 }
 
-bool UploadHandler::needs_input() const
-{
-    return bytes_written_ < content_length_;
-}
-
-bool UploadHandler::has_output() const
-{
-    return headers_off_ < headers_.size();
-}
-
 size_t UploadHandler::read_output(char* buf, size_t n)
 {
-    // LOG(DEBUG) << "inside UploadHandler::read_data -> headers_.size == " << headers_.size();
-    size_t to_copy = std::min(headers_.size() - headers_off_, n);
-    std::memcpy(buf, headers_.c_str() + headers_off_, to_copy);
-    headers_off_ += to_copy;
+    if (out_off_ >= out_buf_.size()) {
+        return 0;
+    }
+    size_t bytes_left = out_buf_.size() - out_off_;
+    size_t to_copy = std::min(bytes_left, n);
+    std::memcpy(buf, out_buf_.data() + out_off_, to_copy);
+    out_off_ += to_copy;
     return (to_copy);
 }
 
 size_t UploadHandler::write_input(const char* buf, size_t n)
 {
     ssize_t bytes = write(fd_, buf, n);
-    if (bytes == -1) {
-        // error occured
-        eob_reached_ = true;
-        if (headers_.empty()) {
-            HttpResponse res;
-            res.code = HttpResponse::kStatusDiskFull;
-            res.inline_body = "<h1> 507 Disk Full </h1>"; // to display a message during testing
-            headers_ = res.to_string();
-            bytes_written_ = content_length_;             // to ensure needs_input returns false
+    if (bytes < 0) {
+        if (out_buf_.empty()) {
+            set_error(HttpResponse::kStatusDiskFull, rc_);
         }
+        bytes_written_ = content_length_; // to ensure needs_input returns false
         return 0;
     }
     bytes_written_ += bytes;
     if (bytes_written_ < content_length_) {
-
         return (bytes);
     }
-
-    if (headers_.empty()) {
-        eob_reached_ = true;
-        HttpResponse res;
-        res.code = HttpResponse::kStatusCreated;
-        res.inline_body = "<h1> 201 File Created </h1>"; // to display a message during testing
-        headers_ = res.to_string();
+    if (out_buf_.empty()) {
+        res_ = HttpResponse::make_response_headers_only(HttpResponse::kStatusCreated, "", 0);
+        out_buf_ = res_.to_string();
     }
     return (0);
 }

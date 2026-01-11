@@ -121,6 +121,7 @@ HttpResponse::make_error(HttpResponse::Status status,
     std::map<HttpResponse::Status, std::string>::const_iterator it = error_pages.find(status);
     if (it != error_pages.end()) {
         res.inline_body = it->second;
+        res.content_length = res.inline_body.size();
         return res;
     }
     int code = static_cast<int>(status);
@@ -130,5 +131,36 @@ HttpResponse::make_error(HttpResponse::Status status,
         << code << " " << HttpResponse::reason_phrase(status) << "</title></head><body><h1>" << code
         << " " << HttpResponse::reason_phrase(status) << "</h1></body></html>";
     res.inline_body = oss.str();
+    res.content_length = res.inline_body.size();
+    return res;
+}
+
+HttpResponse HttpResponse::make_response_headers_only(HttpResponse::Status status,
+                                                      const std::string& content_type,
+                                                      size_t content_length)
+{
+    HttpResponse res(WEBSERV_DEFAULT_HTTP_VERSION);
+    res.code = status;
+    if (!content_type.empty())
+        res.content_type = content_type;
+    else
+        res.content_type = "text/html; charset=UTF-8";
+    res.content_length = content_length; // should be empty of content-length = 0
+    return res;
+}
+
+HttpResponse HttpResponse::make_response_with_body(HttpResponse::Status status,
+                                                   const std::string& content_type,
+                                                   const std::string& body)
+{
+    HttpResponse res(WEBSERV_DEFAULT_HTTP_VERSION);
+    res.code = status;
+    res.content_type = content_type;
+    if (status == 204 || status == 304) {
+        res.inline_body = "";
+        res.content_length = 0;
+    }
+    res.inline_body = body;
+    res.content_length = res.inline_body.size();
     return res;
 }

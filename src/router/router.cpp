@@ -125,10 +125,10 @@ Handler* Router::handle_request(const HttpRequest& request)
 
     if (!best_route.shared.redirect.url.empty()) {
         LOG(WARN) << "Redirections not implemented yet";
-        return new ErrorHandler(HttpResponse::kStatusNotImplemented);
+        return new ErrorHandler(HttpResponse::kStatusNotImplemented, best_route);
     }
     if (!is_allowed_method(request, best_route)) {
-        return new ErrorHandler(HttpResponse::kStatusMethodNotAllowed);
+        return new ErrorHandler(HttpResponse::kStatusMethodNotAllowed, best_route);
     }
 
     std::string full_path = build_request_path(request, best_route);
@@ -137,15 +137,16 @@ Handler* Router::handle_request(const HttpRequest& request)
         return new CgiHandler(full_path, request, best_route);
     }
     if (request.method == "GET") {
-        return new StaticFileHandler(full_path, best_route, request);
+        return new StaticFileHandler(full_path, best_route);
     }
     if (request.method == "POST") {
-        return new UploadHandler(full_path, request.content_length);
+        return new UploadHandler(full_path, best_route, request.content_length);
     }
     if (request.method == "DELETE") {
-        return new DeleteHandler(full_path);
+        return new DeleteHandler(full_path, best_route);
     }
 
     LOG(WARN) << "Router could not find any match, falling back to ErrorHandler";
-    return new ErrorHandler(HttpResponse::kStatusInternalServerError); // Maybe 501 better here?
+    return new ErrorHandler(HttpResponse::kStatusInternalServerError,
+                            best_route); // Maybe 501 better here?
 }

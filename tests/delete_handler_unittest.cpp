@@ -1,9 +1,15 @@
 
+#include "config/server_config.hpp"
 #include "handler/delete_handler.hpp"
 #include "handler/upload_handler.hpp"
 #include "http/http_response.hpp"
 #include "utest/utest.h"
 #include "util/log_message.hpp"
+
+static bool str_contains(const std::string& haystack, const std::string& needle)
+{
+    return haystack.find(needle) != std::string::npos;
+}
 
 static void write_all(Handler* handler, const std::string& content)
 {
@@ -21,11 +27,12 @@ static void write_all(Handler* handler, const std::string& content)
 UTEST(DeleteHandlerTest, file_not_found)
 {
     std::string file_path = "www/example/delete_testing/file_not_found.txt";
-    DeleteHandler handler(file_path);
+    RouteConfig rc;
+    DeleteHandler handler(file_path, rc);
     char buffer[1028];
     size_t n = handler.read_output(buffer, sizeof(buffer));
     std::string http_res(buffer, n);
-    ASSERT_TRUE(http_res.find("404") != std::string::npos);
+    EXPECT_TRUE(str_contains(http_res, "HTTP/1.1 404"));
 }
 
 UTEST(DeleteHandlerTest, file_deleted_no_content)
@@ -33,14 +40,16 @@ UTEST(DeleteHandlerTest, file_deleted_no_content)
     std::string file_path = "www/example/delete_testing/file_deleted_no_content.txt";
     {
         std::string content = "";
-        UploadHandler handler(file_path, content.size());
+        RouteConfig rc;
+        UploadHandler handler(file_path, rc, content.size());
         // write_all(handler, content);
     }
-    DeleteHandler handler(file_path);
+    RouteConfig rc;
+    DeleteHandler handler(file_path, rc);
     char buffer[1028];
     size_t n = handler.read_output(buffer, sizeof(buffer));
     std::string http_res(buffer, n);
-    ASSERT_TRUE(http_res.find("204") != std::string::npos);
+    ASSERT_TRUE(http_res.find("HTTP/1.1 204 No Content") != std::string::npos);
 }
 
 UTEST(DeleteHandlerTest, file_deleted)
@@ -48,12 +57,14 @@ UTEST(DeleteHandlerTest, file_deleted)
     std::string file_path = "www/example/delete_testing/file_deleted.txt";
     {
         std::string content = "some content";
-        UploadHandler handler(file_path, content.size());
+        RouteConfig rc;
+        UploadHandler handler(file_path, rc, content.size());
         write_all(&handler, content);
     }
-    DeleteHandler handler(file_path);
+    RouteConfig rc;
+    DeleteHandler handler(file_path, rc);
     char buffer[1028];
     size_t n = handler.read_output(buffer, sizeof(buffer));
     std::string http_res(buffer, n);
-    ASSERT_TRUE(http_res.find("200") != std::string::npos);
+    EXPECT_TRUE(str_contains(http_res, "HTTP/1.1 204 No Content"));
 }
