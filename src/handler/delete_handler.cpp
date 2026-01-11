@@ -12,42 +12,29 @@
 #include <iostream>
 #include <sstream>
 
-DeleteHandler::DeleteHandler(const std::string& path)
+void DeleteHandler::set_error(const HttpResponse::Status code, const RouteConfig& rc)
+{
+    res_ = HttpResponse::make_error(code, rc.shared.error_pages);
+    out_buf_ = res_.to_string();
+}
+
+DeleteHandler::DeleteHandler(const std::string& path, const RouteConfig& rc)
     : file_path_(path),
-      headers_off_(0)
+      out_off_(0)
 {
     struct stat file_stat;
-    HttpResponse res;
-
-    LOG(DEBUG) << "Trying to delete file : " << path;
-
-    if (stat(path.c_str(), &file_stat) != 0 || !S_ISREG(file_stat.st_mode)) {
-        res.code = HttpResponse::kStatusNotFound;
-        res.content_type = "text/html; charset=UTF-8"; // Magic to display emojis
-        res.inline_body = "<h1>404 Not Found 😢</h1>";
-        headers_ = res.to_string();
+    if (stat(path.data(), &file_stat) != 0 || !S_ISREG(file_stat.st_mode)) {
+        set_error(HttpResponse::kStatusNotFound, rc);
         return;
     }
     int n = remove(path.c_str());
     if (n == -1) {
-        res.code = HttpResponse::kStatusInternalServerError;
-        headers_ = res.to_string();
+        set_error(HttpResponse::kStatusInternalServerError, rc);
         return;
     }
-    LOG(DEBUG) << "FILE removed";
-    if (file_stat.st_size == 0) {
-        res.code = HttpResponse::kStatusNoContent;
-        res.content_type = "text/html; charset=UTF-8"; // Magic to display emojis
-        headers_ = res.to_string();
-        return;
-    }
-
-    res.code = HttpResponse::kStatusOk;
-    res.content_type = "text/html; charset=UTF-8"; // Magic to display emojis
-    res.inline_body = "<h1>File " + path.substr(path.rfind("/") + 1, path.size() - path.find("/")) +
-                      " deleted.</h1>";
-    headers_ = res.to_string();
-    LOG(DEBUG) << "headers_ = " << headers_;
+    res_ = HttpResponse::make_response_headers_only(HttpResponse::kStatusNoContent,
+                                                    "text/html; charset=UTF-8", 0);
+    out_buf_ = res_.to_string();
 }
 
 DeleteHandler::~DeleteHandler()
@@ -56,9 +43,13 @@ DeleteHandler::~DeleteHandler()
 
 size_t DeleteHandler::read_output(char* buf, size_t n)
 {
-    size_t to_copy = std::min(headers_.size() - headers_off_, n);
-    std::memcpy(buf, headers_.c_str() + headers_off_, to_copy);
-    headers_off_ += to_copy;
+    if (out_off_ >= out_buf_.size()) {
+        return 0;
+    }
+    size_t bytes_left = out_buf_.size() - out_off_;
+    size_t to_copy = std::min(bytes_left, n);
+    std::memcpy(buf, out_buf_.data() + out_off_, to_copy);
+    out_off_ += to_copy;
     return (to_copy);
 }
 

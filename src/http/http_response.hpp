@@ -31,6 +31,13 @@ public:
     static Status status_from_int(int code);
     static HttpResponse make_error(HttpResponse::Status status,
                                    const std::map<HttpResponse::Status, std::string>& error_pages);
+    static HttpResponse make_response_headers_only(HttpResponse::Status status,
+                                                   const std::string& content_type,
+                                                   size_t content_length);
+    static HttpResponse make_response_with_body(HttpResponse::Status status,
+                                                const std::string& content_type,
+                                                const std::string& body);
+
     HttpVersion http_version;
     HttpResponse::Status code;
 

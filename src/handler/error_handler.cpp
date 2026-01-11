@@ -7,10 +7,13 @@
 
 size_t ErrorHandler::read_output(char* buf, size_t n)
 {
-    std::string res = res_.to_string();
-    LOG(DEBUG) << res;
-    size_t to_copy = std::min(res.size(), n);
-    std::memcpy(buf, res.data(), to_copy);
+    if (out_off_ >= out_buf_.size()) {
+        return 0;
+    }
+    size_t bytes_left = out_buf_.size() - out_off_;
+    size_t to_copy = std::min(bytes_left, n);
+    std::memcpy(buf, out_buf_.data() + out_off_, to_copy);
+    out_off_ += to_copy;
     return (to_copy);
 }
 
@@ -22,12 +25,11 @@ size_t ErrorHandler::write_input(const char* buf, size_t n)
     return 0;
 }
 
-ErrorHandler::ErrorHandler(HttpResponse::Status code)
-    : res_sent_(false)
+ErrorHandler::ErrorHandler(const HttpResponse::Status code, const RouteConfig& rc)
+    : out_off_(0)
 {
-    res_.code = code;
-    res_.inline_body = "<h1> some error code to be shown here <h1>";
-    LOG(DEBUG) << "ErrorHandler constructed with code " << code;
+    res_ = HttpResponse::make_error(code, rc.shared.error_pages);
+    out_buf_ = res_.to_string();
 }
 
 ErrorHandler::~ErrorHandler()

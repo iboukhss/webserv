@@ -51,64 +51,57 @@ static const char* derive_file_type(const std::string& file_path)
     std::string ext = file_path.substr(pos + 1);
     if (ext == "html" || ext == "htm")
         return "text/html; charset=UTF-8";
-    else if (ext == "txt")
+    if (ext == "txt")
         return "text/plain; charset=UTF-8";
-    else if (ext == "css")
+    if (ext == "css")
         return "text/css";
-    else if (ext == "js")
+    if (ext == "js")
         return "application/javascript";
-    else if (ext == "jpg" || ext == "jpeg")
+    if (ext == "jpg" || ext == "jpeg")
         return "image/jpeg";
-    else if (ext == "png")
+    if (ext == "png")
         return "image/png";
-    else if (ext == "svg")
+    if (ext == "svg")
         return "image/svg+xml";
-    else if (ext == "gif")
+    if (ext == "gif")
         return "image/gif";
-    else if (ext == "ico")
+    if (ext == "ico")
         return "image/x-icon";
-    else
-        return "application/octet-stream";
+    return "application/octet-stream";
 }
 
-StaticFileHandler::StaticFileHandler(const std::string& path,
-                                     const RouteConfig& rc,
-                                     const HttpRequest& saved_request)
-    : fd_(-1),
-      file_size_(0),
-      eof_reached_(false),
-      headers_off_(0),
-      rc_(rc)
+void StaticFileHandler::set_error(const HttpResponse::Status code, const RouteConfig& rc)
 {
-    HttpResponse res(saved_request.http_version);
+    res_ = HttpResponse::make_error(code, rc.shared.error_pages);
+    out_buf_ = res_.to_string();
+}
+
+StaticFileHandler::StaticFileHandler(const std::string& path, const RouteConfig& rc)
+    : fd_(-1),
+      rc_(rc),
+      file_size_(0),
+      out_off_(0)
+{
 
     if (rc.shared.index_files.empty())
         LOG(WARN) << "Index files are empty";
-
     std::string full_path = resolve_path(path, rc.shared.index_files);
-
     if (full_path.empty()) {
         LOG(ERROR) << "Couldn't open file " << path;
-        /*res.code = HttpResponse::kStatusNotFound;
-        res.content_type = "text/html; charset=UTF-8"; // Magic to display emojis
-        res.inline_body = "<h1>404 Not Found 😢</h1>\n";*/
-        headers_ = HttpResponse::make_error(HttpResponse::kStatusNotFound, rc_.shared.error_pages)
-                       .to_string();
+        set_error(HttpResponse::kStatusNotFound, rc_);
         return;
     }
-
     struct stat file_stat;
-
-    fd_ = open(full_path.c_str(), O_RDONLY);
-    stat(full_path.c_str(), &file_stat);
+    fd_ = open(full_path.data(), O_RDONLY);
+    if (fd_ == -1) {
+        set_error(HttpResponse::kStatusInternalServerError, rc_);
+        return;
+    }
+    stat(full_path.data(), &file_stat);
     file_size_ = file_stat.st_size;
-
-    res.code = HttpResponse::kStatusOk;
-    res.content_type = derive_file_type(full_path);
-    res.content_length = file_size_;
-    res.keep_alive = true;
-
-    headers_ = res.to_string();
+    std::string file_type = derive_file_type(full_path);
+    res_ = HttpResponse::make_response_headers_only(HttpResponse::kStatusOk, file_type, file_size_);
+    out_buf_ = res_.to_string();
 }
 
 StaticFileHandler::~StaticFileHandler()
@@ -119,32 +112,30 @@ StaticFileHandler::~StaticFileHandler()
 
 size_t StaticFileHandler::read_output(char* buf, size_t n)
 {
-    size_t bytes_written = 0;
-
-    if (!headers_sent()) {
-        size_t hdrs_bytes = headers_.size() - headers_off_;
-        size_t to_copy = std::min(hdrs_bytes, n);
-
-        std::memcpy(buf, headers_.data() + headers_off_, to_copy);
-        headers_off_ += to_copy;
-        bytes_written += to_copy;
-
-        if (bytes_written == n) {
-            return bytes_written; // buffer full, cannot continue
+    size_t copied = 0;
+    // first copy what remainder in out_buf_
+    if (out_off_ < out_buf_.size()) {
+        size_t bytes_left = out_buf_.size() - out_off_;
+        copied = std::min(bytes_left, n);
+        std::memcpy(buf, out_buf_.data() + out_off_, copied);
+        out_off_ += copied;
+        if (copied == n) {
+            return (copied); // buffer full
         }
     }
-    if (has_body() && !body_sent()) {
-        int body_bytes = read(fd_, buf + bytes_written, n - bytes_written);
-        if (body_bytes == -1) {
-            throw std::runtime_error("read failed");
-        }
-
-        if (body_bytes == 0) {
-            eof_reached_ = true;
-        }
-        bytes_written += body_bytes;
+    if (fd_ == -1) // safeguard
+        return copied;
+    ssize_t bytes = read(fd_, buf + copied, n - copied);
+    if (bytes == 0) {
+        close(fd_);
+        fd_ = -1;
+        return copied;
     }
-    return bytes_written;
+    if (bytes < 0) {
+        throw std::runtime_error("read failed");
+    }
+    copied += bytes;
+    return (copied);
 }
 
 // We never write to this handler (read-only)

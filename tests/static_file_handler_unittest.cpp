@@ -17,14 +17,13 @@ static bool str_contains(const std::string& haystack, const std::string& needle)
 UTEST(StaticFileHandlerTest, StatusOk)
 {
     RouteConfig dummy_config;
-    HttpRequest dummy_request(kHttpVersion1_0);
-    StaticFileHandler test("www/example/index.html", dummy_config, dummy_request);
+    StaticFileHandler test("www/example/index.html", dummy_config);
 
     char buf[4096] = {0};
     size_t n = test.read_output(buf, sizeof(buf));
     std::string response(buf, n);
 
-    EXPECT_TRUE(str_contains(response, "HTTP/1.0 200 OK"));
+    EXPECT_TRUE(str_contains(response, "HTTP/1.1 200 OK"));
     EXPECT_TRUE(str_contains(response, "Content-Length: 64"));
     EXPECT_TRUE(str_contains(response, "<!DOCTYPE html>"
                                        "<html><head><title>Example</title></head></html>\n"));
@@ -33,8 +32,7 @@ UTEST(StaticFileHandlerTest, StatusOk)
 UTEST(StaticFileHandlerTest, StatusNotFound)
 {
     RouteConfig dummy_config;
-    HttpRequest dummy_request(kHttpVersion1_0);
-    StaticFileHandler test("www/example/inexistant.html", dummy_config, dummy_request);
+    StaticFileHandler test("www/example/inexistant.html", dummy_config);
 
     char buf[4096] = {0};
     size_t n = test.read_output(buf, sizeof(buf));
@@ -47,8 +45,7 @@ UTEST(StaticFileHandlerTest, StatusNotFound)
 UTEST(StaticFileHandlerTest, ReadSomeData)
 {
     RouteConfig dummy_config;
-    HttpRequest dummy_request;
-    StaticFileHandler test("", dummy_config, dummy_request);
+    StaticFileHandler test("", dummy_config);
 
     char buf[4096] = {0};
 
@@ -60,8 +57,7 @@ UTEST(StaticFileHandlerTest, ReadSomeData)
 UTEST(StaticFileHandlerTest, WriteNoData)
 {
     RouteConfig dummy_config;
-    HttpRequest dummy_request;
-    StaticFileHandler test("", dummy_config, dummy_request);
+    StaticFileHandler test("", dummy_config);
     char msg[] = "Hello, world!\n";
 
     EXPECT_TRUE(test.has_output());
@@ -72,8 +68,7 @@ UTEST(StaticFileHandlerTest, WriteNoData)
 UTEST(StaticFileHandlerTest, SmallBuffer)
 {
     RouteConfig dummy_config;
-    HttpRequest dummy_request(kHttpVersion1_0);
-    StaticFileHandler test("www/example/index.html", dummy_config, dummy_request);
+    StaticFileHandler test("www/example/index.html", dummy_config);
 
     char buf[1] = {0};
     std::string response;
@@ -82,7 +77,7 @@ UTEST(StaticFileHandlerTest, SmallBuffer)
         response.append(buf, 1);
     }
 
-    EXPECT_TRUE(str_contains(response, "HTTP/1.0 200 OK"));
+    EXPECT_TRUE(str_contains(response, "HTTP/1.1 200 OK"));
     EXPECT_TRUE(str_contains(response, "Content-Length: 64"));
     EXPECT_TRUE(str_contains(response, "<!DOCTYPE html>"
                                        "<html><head><title>Example</title></head></html>\n"));

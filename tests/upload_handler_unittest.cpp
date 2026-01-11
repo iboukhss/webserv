@@ -20,7 +20,8 @@ UTEST(UploadHandlerTest, needs_input_upload_ongoing)
 {
     std::string upload_path = "www/example/needs_input_upload_ongoing.txt";
     std::string content = "some content to be written to the file";
-    UploadHandler handler(upload_path, content.size());
+    RouteConfig rc;
+    UploadHandler handler(upload_path, rc, content.size());
     ASSERT_TRUE(handler.needs_input());
     std::remove(upload_path.c_str());
 }
@@ -29,7 +30,8 @@ UTEST(UploadHandlerTest, has_output_upload_ongoing)
 {
     std::string upload_path = "www/example/has_output_upload_ongoing.txt";
     std::string content = "some content to be written to the file";
-    UploadHandler handler(upload_path, content.size());
+    RouteConfig rc;
+    UploadHandler handler(upload_path, rc, content.size());
     ASSERT_FALSE(handler.has_output());
     std::remove(upload_path.c_str());
 }
@@ -38,7 +40,8 @@ UTEST(UploadHandlerTest, needs_input_upload_done)
 {
     std::string upload_path = "www/example/needs_input_upload_done.txt";
     std::string content = "some content to be written to the file";
-    UploadHandler handler(upload_path, content.size());
+    RouteConfig rc;
+    UploadHandler handler(upload_path, rc, content.size());
     write_all(handler, content);
     ASSERT_TRUE(handler.has_output());
     std::remove(upload_path.c_str());
@@ -48,7 +51,8 @@ UTEST(UploadHandlerTest, has_output_upload_done)
 {
     std::string upload_path = "www/example/has_output_upload_done.txt";
     std::string content = "some content to be written to the file";
-    UploadHandler handler(upload_path, content.size());
+    RouteConfig rc;
+    UploadHandler handler(upload_path, rc, content.size());
     write_all(handler, content);
     ASSERT_TRUE(handler.has_output());
     std::remove(upload_path.c_str());
@@ -58,7 +62,8 @@ UTEST(UploadHandlerTest, check_content_uploaded)
 {
     std::string upload_path = "www/example/check_content_uploaded.txt";
     std::string content = "some content to be written to the file";
-    UploadHandler handler(upload_path, content.size());
+    RouteConfig rc;
+    UploadHandler handler(upload_path, rc, content.size());
     write_all(handler, content);
     ASSERT_FALSE(handler.needs_input());
     ASSERT_TRUE(handler.has_output());
@@ -78,7 +83,8 @@ UTEST(UploadHandlerTest, ReturnsUploadSuccess)
 {
     std::string upload_path = "www/example/return_201.txt";
     std::string content = "some content to be written to the file";
-    UploadHandler handler(upload_path, content.size());
+    RouteConfig rc;
+    UploadHandler handler(upload_path, rc, content.size());
     ASSERT_FALSE(handler.has_output());
     write_all(handler, content);
     ASSERT_TRUE(handler.has_output());
@@ -94,11 +100,13 @@ UTEST(UploadHandlerTest, ReturnsFileAlreadyExists)
     std::string upload_path = "www/example/return_409.txt";
     std::string content = "some content to be written to the file";
     {
-        UploadHandler handler1(upload_path, content.size());
+        RouteConfig rc;
+        UploadHandler handler1(upload_path, rc, content.size());
         write_all(handler1, content);
         ASSERT_TRUE(handler1.has_output());
     }
-    UploadHandler handler2(upload_path, content.size());
+    RouteConfig rc;
+    UploadHandler handler2(upload_path, rc, content.size());
     ASSERT_TRUE(handler2.has_output());
     char buffer[1028];
     size_t n = handler2.read_output(buffer, sizeof(buffer));
