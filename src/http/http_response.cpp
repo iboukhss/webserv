@@ -70,6 +70,8 @@ HttpResponse::Status HttpResponse::status_from_int(int code)
     case 200: return HttpResponse::kStatusOk;
     case 201: return HttpResponse::kStatusCreated;
     case 204: return HttpResponse::kStatusNoContent;
+    case 301: return HttpResponse::kStatusMovedPermanently;
+    case 302: return HttpResponse::kStatusFound;
     case 400: return HttpResponse::kStatusBadRequest;
     case 403: return HttpResponse::kStatusForbidden;
     case 404: return HttpResponse::kStatusNotFound;
@@ -92,6 +94,9 @@ std::string HttpResponse::to_string() const
 
     if (!content_type.empty()) {
         out << "Content-Type: " << content_type << "\r\n";
+    }
+    if (!location.empty()) {
+        out << "Location: " << location << "\r\n";
     }
     if (!inline_body.empty()) {
         out << "Content-Length: " << inline_body.size() << "\r\n";
@@ -145,8 +150,6 @@ HttpResponse HttpResponse::make_response_headers_only(HttpResponse::Status statu
     res.code = status;
     if (!content_type.empty())
         res.content_type = content_type;
-    else
-        res.content_type = "text/html; charset=UTF-8";
     res.keep_alive = req.keep_alive;
     res.content_length = content_length; // should be empty of content-length = 0
     return res;

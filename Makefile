@@ -45,6 +45,8 @@ srcs = \
   src/handler/error_handler.hpp \
   src/handler/handler.cpp \
   src/handler/handler.hpp \
+  src/handler/redirect_handler.cpp \
+  src/handler/redirect_handler.hpp \
   src/handler/static_file_handler.cpp \
   src/handler/static_file_handler.hpp \
   src/handler/upload_handler.cpp \
@@ -90,6 +92,7 @@ test_srcs = \
   tests/router_unittest.cpp \
   tests/server_config_unittest.cpp \
   tests/static_file_handler_unittest.cpp \
+  tests/redirect_handler_unittest.cpp \
   tests/str_split_unittest.cpp \
   tests/main.cpp \
 

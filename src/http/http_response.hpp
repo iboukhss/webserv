@@ -29,16 +29,6 @@ public:
     };
 
     explicit HttpResponse(HttpVersion protocol = WEBSERV_DEFAULT_HTTP_VERSION);
-    static Status status_from_int(int code);
-    static HttpResponse make_error(HttpResponse::Status status,
-                                   const std::map<HttpResponse::Status, std::string>& error_pages,
-                                   const HttpRequest& req);
-    static HttpResponse make_response_headers_only(HttpResponse::Status status,
-                                                   const std::string& content_type,
-                                                   size_t content_length, const HttpRequest& req);
-    static HttpResponse make_response_with_body(HttpResponse::Status status,
-                                                const std::string& content_type,
-                                                const std::string& body, const HttpRequest& req);
 
     HttpVersion http_version;
     HttpResponse::Status code;
@@ -50,6 +40,7 @@ public:
 
     std::string content_type;
     size_t content_length;
+    std::string location;
     bool is_chunked;
     bool keep_alive;
 
@@ -60,7 +51,16 @@ public:
 
     static const char* reason_phrase(HttpResponse::Status status);
     static HttpResponse::Status parse_status(const std::string& s);
-
+    static Status status_from_int(int code);
+    static HttpResponse make_error(HttpResponse::Status status,
+                                   const std::map<HttpResponse::Status, std::string>& error_pages,
+                                   const HttpRequest& req);
+    static HttpResponse make_response_headers_only(HttpResponse::Status status,
+                                                   const std::string& content_type,
+                                                   size_t content_length, const HttpRequest& req);
+    static HttpResponse make_response_with_body(HttpResponse::Status status,
+                                                const std::string& content_type,
+                                                const std::string& body, const HttpRequest& req);
     std::string to_string() const;
 };
 

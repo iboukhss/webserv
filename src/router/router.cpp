@@ -6,6 +6,7 @@
 #include "handler/error_handler.hpp"
 #include "handler/static_file_handler.hpp"
 #include "handler/upload_handler.hpp"
+#include "handler/redirect_handler.hpp"
 #include "http/http_request.hpp"
 #include "http/http_response.hpp"
 #include "util/log_message.hpp"
@@ -124,8 +125,7 @@ Handler* Router::handle_request(const HttpRequest& request)
     const RouteConfig& best_route = find_best_route(request.path);
 
     if (!best_route.shared.redirect.url.empty()) {
-        LOG(WARN) << "Redirections not implemented yet";
-        return new ErrorHandler(HttpResponse::kStatusNotImplemented, best_route, request);
+        return new RedirectHandler(best_route.shared.redirect.code, best_route.shared.redirect.url, best_route, request);
     }
     if (!is_allowed_method(request, best_route)) {
         return new ErrorHandler(HttpResponse::kStatusMethodNotAllowed, best_route, request);
