@@ -46,13 +46,15 @@ private:
     }
 };
 
-void print_response_expected(const std::string& response, const std::string& expected)
+/*
+static void print_response_expected(const std::string& response, const std::string& expected)
 {
     std::cout << "reponse = " << std::endl << response << std::endl;
     std::cout << "expected = " << std::endl << expected << std::endl;
     std::cout << "response size = " << response.size() << std::endl;
     std::cout << "expected size = " << expected.size() << std::endl;
 }
+*/
 
 UTEST(CgiHandler, SimpleGet)
 {
@@ -202,8 +204,8 @@ UTEST(CgiHandler, NotExecutable)
 
 UTEST(CgiHandler, EmptyOutput)
 {
-    TempCgiScript script(
-        "echo\n""echo\n");
+    TempCgiScript script("echo\n"
+                         "echo\n");
     RouteConfig rc;
     HttpRequest req;
     req.method = "GET";
@@ -222,9 +224,9 @@ UTEST(CgiHandler, EmptyOutput)
             response.append(buf, n);
     }
     HttpResponse res =
-        HttpResponse::make_response_headers_only(HttpResponse::kStatusOk, "", 0, req);
+        HttpResponse::make_error(HttpResponse::kStatusBadGateway, rc.shared.error_pages, req);
     std::string expected = res.to_string();
-    print_response_expected(response, expected);
+    // print_response_expected(response, expected);
     ASSERT_TRUE(response == expected);
 }
 

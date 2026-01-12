@@ -24,12 +24,12 @@ public:
     virtual int cgi_read_fd() const { return -1; }
     virtual int cgi_write_fd() const { return -1; }
 
-    void set_error(const HttpResponse::Status code);
     const std::string& path() const { return path_; } // still required ?
 
 private:
     UploadHandler(const UploadHandler&);
     UploadHandler& operator=(const UploadHandler&);
+    void set_error(const HttpResponse::Status code);
 
     // constructor args
     const std::string& path_;

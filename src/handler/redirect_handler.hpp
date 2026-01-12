@@ -1,18 +1,16 @@
-#ifndef HANDLER_DELETE_HANDLER_HPP_
-#define HANDLER_DELETE_HANDLER_HPP_
+#ifndef HANDLER_REDIRECT_HANDLER_HPP_
+#define HANDLER_REDIRECT_HANDLER_HPP_
 
 #include "config/server_config.hpp"
 #include "handler/handler.hpp"
 #include "http/http_request.hpp"
 
-#include <sys/stat.h>
-
 #include <string>
 
-class DeleteHandler : public Handler {
+class RedirectHandler : public Handler {
 public:
-    explicit DeleteHandler(const std::string& path, const RouteConfig& rc, const HttpRequest& req);
-    virtual ~DeleteHandler();
+    explicit RedirectHandler(const RouteConfig& rc, const HttpRequest& req);
+    virtual ~RedirectHandler();
 
     virtual size_t read_output(char* buf, size_t n);
     virtual size_t write_input(const char* buf, size_t n);
@@ -24,15 +22,12 @@ public:
     virtual int cgi_read_fd() const { return -1; }
     virtual int cgi_write_fd() const { return -1; }
 
-    const std::string& path() const { return path_; }
-
 private:
-    DeleteHandler(const DeleteHandler&);
-    DeleteHandler& operator=(const DeleteHandler&);
+    RedirectHandler(const RedirectHandler&);
+    RedirectHandler& operator=(const RedirectHandler&);
     void set_error(const HttpResponse::Status);
 
-    // constructor args
-    const std::string& path_;
+    // constructor args const
     const RouteConfig& rc_;
     const HttpRequest& req_;
     // Response built
@@ -41,5 +36,4 @@ private:
     std::string out_buf_;
     size_t out_off_;
 };
-
 #endif

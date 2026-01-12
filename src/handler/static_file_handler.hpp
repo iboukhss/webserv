@@ -25,11 +25,10 @@ public:
     virtual int cgi_read_fd() const { return -1; };
     virtual int cgi_write_fd() const { return -1; };
 
-    void set_error(const HttpResponse::Status code);
-
 private:
     StaticFileHandler(const StaticFileHandler&);
     StaticFileHandler& operator=(const StaticFileHandler&);
+    void set_error(const HttpResponse::Status code);
 
     // constructor args
     const std::string& path_;
