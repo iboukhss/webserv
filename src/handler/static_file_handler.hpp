@@ -11,7 +11,7 @@
 
 class StaticFileHandler : public Handler {
 public:
-    StaticFileHandler(const std::string& path, const RouteConfig& rc, const HttpRequest &req);
+    StaticFileHandler(const std::string& path, const RouteConfig& rc, const HttpRequest& req);
 
     virtual ~StaticFileHandler();
 
@@ -31,19 +31,18 @@ private:
     StaticFileHandler(const StaticFileHandler&);
     StaticFileHandler& operator=(const StaticFileHandler&);
 
-    //constructor args
-    const std::string &path_;
+    // constructor args
+    const std::string& path_;
     const RouteConfig& rc_;
-    const HttpRequest &req_;
-    //Response built
+    const HttpRequest& req_;
+    // Response built
     HttpResponse res_;
-    //Serialized response and offset
+    // Serialized response and offset
     std::string out_buf_;
     size_t out_off_;
-    //other handler specifc variables
+    // other handler specifc variables
     off_t file_size_;
-    int fd_;    
-  
+    int fd_;
 };
 
 #endif

@@ -153,6 +153,9 @@ db:
 format:
 	clang-format --style=file --dry-run --Werror $(all_cpps) $(all_hpps)
 
+format-fix:
+	clang-format --style=file -i $(all_cpps) $(all_hpps)
+
 lint: db
 	clang-tidy -p=. --header-filter=src/ --warnings-as-errors=* $(all_cpps)
 

@@ -12,8 +12,11 @@
 #include <iostream>
 #include <sstream>
 
-DeleteHandler::DeleteHandler(const std::string& path, const RouteConfig& rc, const HttpRequest &req)
-    : path_(path), rc_(rc), req_(req), out_off_(0)
+DeleteHandler::DeleteHandler(const std::string& path, const RouteConfig& rc, const HttpRequest& req)
+    : path_(path),
+      rc_(rc),
+      req_(req),
+      out_off_(0)
 {
     struct stat file_stat;
     if (stat(path.data(), &file_stat) != 0 || !S_ISREG(file_stat.st_mode)) {

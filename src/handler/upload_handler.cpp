@@ -12,14 +12,14 @@
 #include <iostream>
 #include <sstream>
 
-UploadHandler::UploadHandler(const std::string& path, const RouteConfig& rc, const HttpRequest &req)
+UploadHandler::UploadHandler(const std::string& path, const RouteConfig& rc, const HttpRequest& req)
     : path_(path),
       rc_(rc),
       req_(req),
       out_off_(0),
       bytes_written_(0),
       fd_(-1)
-      
+
 {
     struct stat file_stat;
     if (stat(path.c_str(), &file_stat) == 0 && S_ISREG(file_stat.st_mode)) {

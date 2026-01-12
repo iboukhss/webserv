@@ -147,6 +147,6 @@ Handler* Router::handle_request(const HttpRequest& request)
     }
 
     LOG(WARN) << "Router could not find any match, falling back to ErrorHandler";
-    return new ErrorHandler(HttpResponse::kStatusInternalServerError,
-                            best_route, request); // Maybe 501 better here?
+    return new ErrorHandler(HttpResponse::kStatusInternalServerError, best_route,
+                            request); // Maybe 501 better here?
 }

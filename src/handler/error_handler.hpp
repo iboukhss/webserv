@@ -3,12 +3,13 @@
 
 #include "config/server_config.hpp"
 #include "handler/handler.hpp"
-#include "http/http_response.hpp"
 #include "http/http_request.hpp"
+#include "http/http_response.hpp"
 
 class ErrorHandler : public Handler {
 public:
-    explicit ErrorHandler(const HttpResponse::Status code, const RouteConfig& rc, const HttpRequest &req_);
+    explicit ErrorHandler(const HttpResponse::Status code, const RouteConfig& rc,
+                          const HttpRequest& req_);
     virtual ~ErrorHandler();
 
     virtual size_t read_output(char* buf, size_t n);
@@ -27,15 +28,14 @@ private:
     ErrorHandler(const ErrorHandler&);
     ErrorHandler& operator=(const ErrorHandler&);
 
-    //constructor args
+    // constructor args
     const RouteConfig& rc_;
-    const HttpRequest &req_;
-    //Response built
+    const HttpRequest& req_;
+    // Response built
     HttpResponse res_;
-    //Serialized response and offset
+    // Serialized response and offset
     std::string out_buf_;
     size_t out_off_;
-
 };
 
 #endif

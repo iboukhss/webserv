@@ -5,8 +5,11 @@
 #include <cstring>
 #include <iostream>
 
-ErrorHandler::ErrorHandler(const HttpResponse::Status code, const RouteConfig& rc, const HttpRequest &req)
-    : rc_(rc), req_(req), out_off_(0)
+ErrorHandler::ErrorHandler(const HttpResponse::Status code, const RouteConfig& rc,
+                           const HttpRequest& req)
+    : rc_(rc),
+      req_(req),
+      out_off_(0)
 {
     res_ = HttpResponse::make_error(code, rc.shared.error_pages, req_);
     out_buf_ = res_.to_string();

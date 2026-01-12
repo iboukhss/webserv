@@ -113,7 +113,8 @@ std::string HttpResponse::to_string() const
 
 HttpResponse
 HttpResponse::make_error(HttpResponse::Status status,
-                         const std::map<HttpResponse::Status, std::string>& error_pages, const HttpRequest &req)
+                         const std::map<HttpResponse::Status, std::string>& error_pages,
+                         const HttpRequest& req)
 {
     HttpResponse res(req.http_version);
     res.code = status;
@@ -138,7 +139,7 @@ HttpResponse::make_error(HttpResponse::Status status,
 
 HttpResponse HttpResponse::make_response_headers_only(HttpResponse::Status status,
                                                       const std::string& content_type,
-                                                      size_t content_length, const HttpRequest &req)
+                                                      size_t content_length, const HttpRequest& req)
 {
     HttpResponse res(req.http_version);
     res.code = status;
@@ -153,7 +154,7 @@ HttpResponse HttpResponse::make_response_headers_only(HttpResponse::Status statu
 
 HttpResponse HttpResponse::make_response_with_body(HttpResponse::Status status,
                                                    const std::string& content_type,
-                                                   const std::string& body, const HttpRequest &req)
+                                                   const std::string& body, const HttpRequest& req)
 {
     HttpResponse res(req.http_version);
     res.code = status;
