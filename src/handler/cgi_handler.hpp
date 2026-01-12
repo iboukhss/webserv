@@ -12,7 +12,7 @@
 
 class CgiHandler : public Handler {
 public:
-    CgiHandler(const std::string& path, const HttpRequest& request, const RouteConfig& config);
+    CgiHandler(const std::string& path, const RouteConfig& rc, const HttpRequest& request);
     virtual ~CgiHandler();
 
     virtual size_t read_output(char* buf, size_t n);
@@ -63,9 +63,15 @@ private:
     bool setup_pipes();
     void spawn_child(char** argv);
 
+    //constructor args
     const std::string path_;
-    const HttpRequest& saved_request_;
-    const RouteConfig& config_;
+    const RouteConfig& rc_;
+    const HttpRequest& req_;
+    //Response built
+    HttpResponse res_;
+    //Serialized response and offset
+    std::string out_buf_;
+    size_t out_off_;
 
     std::vector<char*> envp_;
     std::vector<std::string> env_strings_;

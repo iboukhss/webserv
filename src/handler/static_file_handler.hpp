@@ -11,7 +11,7 @@
 
 class StaticFileHandler : public Handler {
 public:
-    StaticFileHandler(const std::string& path, const RouteConfig& rc);
+    StaticFileHandler(const std::string& path, const RouteConfig& rc, const HttpRequest &req);
 
     virtual ~StaticFileHandler();
 
@@ -22,23 +22,28 @@ public:
     virtual bool needs_input() const { return false; };
     virtual bool is_done() const { return out_off_ >= out_buf_.size() && fd_ == -1; }
 
-    void set_error(const HttpResponse::Status code, const RouteConfig& rc);
-
     virtual int cgi_read_fd() const { return -1; };
     virtual int cgi_write_fd() const { return -1; };
+
+    void set_error(const HttpResponse::Status code);
 
 private:
     StaticFileHandler(const StaticFileHandler&);
     StaticFileHandler& operator=(const StaticFileHandler&);
 
-    int fd_;
+    //constructor args
+    const std::string &path_;
     const RouteConfig& rc_;
-    off_t file_size_;
-
+    const HttpRequest &req_;
+    //Response built
     HttpResponse res_;
-
+    //Serialized response and offset
     std::string out_buf_;
     size_t out_off_;
+    //other handler specifc variables
+    off_t file_size_;
+    int fd_;    
+  
 };
 
 #endif

@@ -60,16 +60,14 @@ UTEST(CgiHandler, SimpleGet)
                          "echo \"Content-Length: 9\"\n"
                          "echo\n"
                          "echo -n \"Hello CGI\"");
-
+    RouteConfig rc;
     HttpRequest req;
     req.method = "GET";
     req.path = script.path();
     req.query_string = "";
     req.content_length = 0;
 
-    RouteConfig cfg;
-
-    CgiHandler handler(script.path(), req, cfg);
+    CgiHandler handler(script.path(), rc, req);
 
     char buf[1024];
     std::string response;
@@ -96,16 +94,14 @@ UTEST(CgiHandler, PostBody)
                          "echo \"Content-Length: 11\"\n"
                          "echo\n"
                          "cat -");
-
+    RouteConfig rc;
     HttpRequest req;
     req.method = "POST";
     req.path = script.path();
     req.query_string = "";
     req.content_length = strlen(body); // length of body
 
-    RouteConfig cfg;
-
-    CgiHandler handler(script.path(), req, cfg);
+    CgiHandler handler(script.path(), rc, req);
 
     while (handler.needs_input()) {
         handler.write_input(body, req.content_length);
@@ -135,16 +131,14 @@ UTEST(CgiHandler, MissingContentType)
 {
     TempCgiScript script("echo\n"
                          "echo \"No headers\"");
-
+    RouteConfig rc;
     HttpRequest req;
     req.method = "GET";
     req.path = script.path();
     req.query_string = "";
     req.content_length = 0;
 
-    RouteConfig cfg;
-
-    CgiHandler handler(script.path(), req, cfg);
+    CgiHandler handler(script.path(), rc, req);
 
     char buf[1024];
     std::string response;
@@ -154,7 +148,7 @@ UTEST(CgiHandler, MissingContentType)
         if (n > 0)
             response.append(buf, n);
     }
-    HttpResponse res = res.make_error(HttpResponse::kStatusBadGateway, cfg.shared.error_pages);
+    HttpResponse res = res.make_error(HttpResponse::kStatusBadGateway, rc.shared.error_pages, req);
     std::string expected = res.to_string();
     // print_response_expected(response, expected);
     ASSERT_TRUE(response == expected);
@@ -183,15 +177,14 @@ UTEST(CgiHandler, NotExecutable)
         ofs << "echo test\n";
     }
     chmod(f.path().c_str(), 0644);
-
+    RouteConfig rc;
     HttpRequest req;
     req.method = "GET";
     req.path = f.path();
     req.query_string = "";
     req.content_length = 0;
 
-    RouteConfig cfg;
-    CgiHandler handler(f.path(), req, cfg);
+    CgiHandler handler(f.path(), rc, req);
 
     char buf[512];
     std::string response;
@@ -201,7 +194,7 @@ UTEST(CgiHandler, NotExecutable)
         if (n > 0)
             response.append(buf, n);
     }
-    HttpResponse res = res.make_error(HttpResponse::kStatusForbidden, cfg.shared.error_pages);
+    HttpResponse res = res.make_error(HttpResponse::kStatusForbidden, rc.shared.error_pages, req);
     std::string expected = res.to_string();
     // print_response_expected(response, expected);
     ASSERT_TRUE(response == expected);
@@ -209,17 +202,17 @@ UTEST(CgiHandler, NotExecutable)
 
 UTEST(CgiHandler, EmptyOutput)
 {
-    TempCgiScript script("echo \"Content-Type: text/plain\"\n"
+    TempCgiScript script("echo \"Content-Type: text/html; charset=UTF-8\"\n"
                          "echo\n");
-
+    RouteConfig rc;
     HttpRequest req;
     req.method = "GET";
     req.path = script.path();
     req.query_string = "";
     req.content_length = 0;
 
-    RouteConfig cfg;
-    CgiHandler handler(script.path(), req, cfg);
+
+    CgiHandler handler(script.path(), rc, req);
 
     char buf[128];
     size_t n = 0;
@@ -229,12 +222,9 @@ UTEST(CgiHandler, EmptyOutput)
         if (n > 0)
             response.append(buf, n);
     }
-    HttpResponse res;
-    res.code = HttpResponse::kStatusOk;
-    res.content_type = "text/plain";
-    res.keep_alive = true;
+    HttpResponse res = HttpResponse::make_response_headers_only(HttpResponse::kStatusOk, "", 0, req);
     std::string expected = res.to_string();
-    // print_response_expected(response, expected);
+    print_response_expected(response, expected);
     ASSERT_TRUE(response == expected);
 }
 
@@ -242,15 +232,16 @@ UTEST(CgiHandler, PythonScript_GET)
 {
     std::string script = "tests/cgi_upper.py";
     std::string query = "hello=world=returned=UPPER=case";
+    RouteConfig rc;
     HttpRequest req;
     req.method = "GET";
     req.path = script;
     req.query_string = query;
     req.content_length = 0;
 
-    RouteConfig cfg;
 
-    CgiHandler handler(script, req, cfg);
+
+    CgiHandler handler(script, rc, req);
 
     char buf[1024];
     std::string response;
@@ -285,9 +276,9 @@ UTEST(CgiHandler, PythonScript_POST)
     req.query_string = "SOME=QUERY=STRING";
     req.content_length = body_len;
 
-    RouteConfig cfg;
+    RouteConfig rc;
 
-    CgiHandler handler(script, req, cfg);
+    CgiHandler handler(script, rc, req);
 
     // Write POST body
     while (handler.needs_input()) {
@@ -329,9 +320,9 @@ UTEST(CgiHandler, PythonScript_POST_1MB_Payload)
     req.query_string = "SOME=QUERY=STRING";
     req.content_length = body_len;
 
-    RouteConfig cfg;
+    RouteConfig rc;
 
-    CgiHandler handler(script, req, cfg);
+    CgiHandler handler(script, rc, req);
 
     // Write POST body (will require multiple writes)
     size_t written = 0;
@@ -429,10 +420,10 @@ UTEST(CgiHandler, UbuntuCgiTester_GET)
     req.query_string = "";
     req.content_length = 0;
 
-    RouteConfig cfg;
-    cfg.shared.cgi.exec_path = "";
+    RouteConfig rc;
+    rc.shared.cgi.exec_path = "";
 
-    CgiHandler handler("tests/ubuntu_cgi_tester", req, cfg);
+    CgiHandler handler("tests/ubuntu_cgi_tester", rc, req);
 
     char buf[1024];
     std::string response;
@@ -458,9 +449,9 @@ UTEST(CgiHandler, UbuntuCgiTester_POST)
     req.query_string = "";
     req.content_length = body_len;
 
-    RouteConfig cfg;
+    RouteConfig rc;
 
-    CgiHandler handler("tests/ubuntu_cgi_tester", req, cfg);
+    CgiHandler handler("tests/ubuntu_cgi_tester", rc, req);
 
     while (handler.needs_input())
         handler.write_input(body, body_len);
@@ -489,12 +480,12 @@ UTEST(CgiHandler, UbuntuCgiTester_ExtensionBased)
     req.query_string = "";
     req.content_length = 4;
 
-    RouteConfig cfg;
-    cfg.shared.cgi.extension = ".bla";
-    cfg.shared.cgi.exec_path = "/tests/ubuntu_cgi_tester";
-    cfg.shared.cgi.allowed_methods.push_back("POST");
+    RouteConfig rc;
+    rc.shared.cgi.extension = ".bla";
+    rc.shared.cgi.exec_path = "/tests/ubuntu_cgi_tester";
+    rc.shared.cgi.allowed_methods.push_back("POST");
 
-    CgiHandler handler(fake_file, req, cfg);
+    CgiHandler handler(fake_file, rc, req);
 
     handler.write_input("test", 4);
 
@@ -518,10 +509,10 @@ UTEST(CgiHandler, UbuntuCgiTester_MethodNotAllowed)
     req.query_string = "";
     req.content_length = 0;
 
-    RouteConfig cfg;
-    cfg.shared.cgi.allowed_methods.push_back("POST");
+    RouteConfig rc;
+    rc.shared.cgi.allowed_methods.push_back("POST");
 
-    CgiHandler handler(req.path, req, cfg);
+    CgiHandler handler(req.path, rc, req);
 
     char buf[512];
     std::string response;
@@ -551,9 +542,9 @@ UTEST(CgiHandler, UbuntuCgiTester_NotExecutable)
     req.query_string = "";
     req.content_length = 0;
 
-    RouteConfig cfg;
+    RouteConfig rc;
 
-    CgiHandler handler(f.path(), req, cfg);
+    CgiHandler handler(f.path(), rc, req);
 
     char buf[256];
     std::string response;

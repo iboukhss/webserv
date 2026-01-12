@@ -5,6 +5,17 @@
 #include <cstring>
 #include <iostream>
 
+ErrorHandler::ErrorHandler(const HttpResponse::Status code, const RouteConfig& rc, const HttpRequest &req)
+    : rc_(rc), req_(req), out_off_(0)
+{
+    res_ = HttpResponse::make_error(code, rc.shared.error_pages, req_);
+    out_buf_ = res_.to_string();
+}
+
+ErrorHandler::~ErrorHandler()
+{
+}
+
 size_t ErrorHandler::read_output(char* buf, size_t n)
 {
     if (out_off_ >= out_buf_.size()) {
@@ -23,15 +34,4 @@ size_t ErrorHandler::write_input(const char* buf, size_t n)
     (void) buf;
     (void) n;
     return 0;
-}
-
-ErrorHandler::ErrorHandler(const HttpResponse::Status code, const RouteConfig& rc)
-    : out_off_(0)
-{
-    res_ = HttpResponse::make_error(code, rc.shared.error_pages);
-    out_buf_ = res_.to_string();
-}
-
-ErrorHandler::~ErrorHandler()
-{
 }

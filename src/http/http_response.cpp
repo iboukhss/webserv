@@ -113,11 +113,12 @@ std::string HttpResponse::to_string() const
 
 HttpResponse
 HttpResponse::make_error(HttpResponse::Status status,
-                         const std::map<HttpResponse::Status, std::string>& error_pages)
+                         const std::map<HttpResponse::Status, std::string>& error_pages, const HttpRequest &req)
 {
-    HttpResponse res(WEBSERV_DEFAULT_HTTP_VERSION);
+    HttpResponse res(req.http_version);
     res.code = status;
     res.content_type = "text/html; charset=UTF-8";
+    res.keep_alive = req.keep_alive;
     std::map<HttpResponse::Status, std::string>::const_iterator it = error_pages.find(status);
     if (it != error_pages.end()) {
         res.inline_body = it->second;
@@ -137,25 +138,27 @@ HttpResponse::make_error(HttpResponse::Status status,
 
 HttpResponse HttpResponse::make_response_headers_only(HttpResponse::Status status,
                                                       const std::string& content_type,
-                                                      size_t content_length)
+                                                      size_t content_length, const HttpRequest &req)
 {
-    HttpResponse res(WEBSERV_DEFAULT_HTTP_VERSION);
+    HttpResponse res(req.http_version);
     res.code = status;
     if (!content_type.empty())
         res.content_type = content_type;
     else
         res.content_type = "text/html; charset=UTF-8";
+    res.keep_alive = req.keep_alive;
     res.content_length = content_length; // should be empty of content-length = 0
     return res;
 }
 
 HttpResponse HttpResponse::make_response_with_body(HttpResponse::Status status,
                                                    const std::string& content_type,
-                                                   const std::string& body)
+                                                   const std::string& body, const HttpRequest &req)
 {
-    HttpResponse res(WEBSERV_DEFAULT_HTTP_VERSION);
+    HttpResponse res(req.http_version);
     res.code = status;
     res.content_type = content_type;
+    res.keep_alive = req.keep_alive;
     if (status == 204 || status == 304) {
         res.inline_body = "";
         res.content_length = 0;

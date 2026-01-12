@@ -18,164 +18,15 @@
 
 static std::vector<char*> make_envp(std::vector<std::string>& env);
 
-void CgiHandler::init_state()
-{
-    input_fd_[0] = -1;
-    input_fd_[1] = -1;
-    output_fd_[0] = -1;
-    output_fd_[1] = -1;
-}
-
-bool CgiHandler::validate_cgi_target(bool is_interpreter_cgi)
-{
-    struct stat sb;
-
-    // Script must exist and be a regular file
-    if (stat(path_.c_str(), &sb) == -1 || !S_ISREG(sb.st_mode)) {
-        set_res_and_quit(HttpResponse::kStatusForbidden);
-        return false;
-    }
-
-    if (!is_interpreter_cgi) {
-        // Direct CGI → script itself must be executable
-        if (access(path_.c_str(), X_OK) != 0) {
-            set_res_and_quit(HttpResponse::kStatusForbidden);
-            return false;
-        }
-    }
-    else {
-        // Interpreter CGI → interpreter must be executable
-        if (access(config_.shared.cgi.exec_path.c_str(), X_OK) != 0) {
-            set_res_and_quit(HttpResponse::kStatusInternalServerError);
-            return false;
-        }
-    }
-    return true;
-}
-
-static std::vector<char*> make_envp(std::vector<std::string>& env)
-{
-    std::vector<char*> envp;
-    envp.reserve(env.size() + 1);
-
-    for (size_t i = 0; i < env.size(); ++i)
-        envp.push_back(const_cast<char*>(env[i].c_str()));
-
-    envp.push_back(NULL);
-    return envp;
-}
-
-std::vector<std::string> CgiHandler::build_env_strings() const
-{
-    std::vector<std::string> env;
-
-    env.push_back("REQUEST_METHOD=" + saved_request_.method);
-    env.push_back("SERVER_PROTOCOL=HTTP/1.1");
-    env.push_back("PATH_INFO=/");
-    env.push_back("SCRIPT_NAME=" + saved_request_.path);
-    env.push_back("QUERY_STRING=" + saved_request_.query_string);
-    env.push_back("CONTENT_LENGTH=" + to_string(saved_request_.content_length));
-    if (saved_request_.method == "POST") {
-        env.push_back("CONTENT_TYPE=application/x-www-form-urlencoded");
-    }
-    env.push_back("SERVER_NAME=localhost"); // to be updated based on config
-
-    env.push_back("SERVER_PORT=" + to_string(WEBSERV_DEFAULT_PORT));
-    env.push_back("PATH=/usr/bin:/bin");
-
-    env.push_back("GATEWAY_INTERFACE=CGI/1.1");
-
-    env.push_back("REQUEST_URI=" + saved_request_.path +
-                  (saved_request_.query_string.empty() ? "" : "?" + saved_request_.query_string));
-    env.push_back("REDIRECT_STATUS=200"); // VERY IMPORTANT
-
-    LOG(DEBUG) << "saved_request_.path = " << saved_request_.path;
-
-    for (size_t i = 0; i < env.size(); ++i) {
-        LOG(DEBUG) << "CGI ENV: " << env[i];
-    }
-
-    return (env);
-}
-
-void CgiHandler::build_exec_context(char** argv, bool is_interpreter_cgi)
-{
-    env_strings_ = build_env_strings();
-    envp_ = make_envp(env_strings_);
-
-    if (is_interpreter_cgi) {
-        // Interpreter-based CGI
-        argv[0] = const_cast<char*>(config_.shared.cgi.exec_path.c_str());
-        argv[1] = const_cast<char*>(path_.c_str());
-        argv[2] = NULL;
-    }
-    else {
-        // Direct executable CGI (binary or shebang)
-        argv[0] = const_cast<char*>(path_.c_str());
-        argv[1] = NULL;
-    }
-}
-
-bool CgiHandler::setup_pipes()
-{
-    if (saved_request_.method == "POST") {
-        if (pipe(input_fd_) == -1) {
-            set_res_and_quit(HttpResponse::kStatusInternalServerError);
-            return false;
-        }
-    }
-    if (pipe(output_fd_) == -1) {
-        set_res_and_quit(HttpResponse::kStatusInternalServerError);
-        return false;
-    }
-    return true;
-}
-
-void CgiHandler::spawn_child(char** argv)
-{
-    pid_ = fork();
-    if (pid_ == -1) {
-        set_res_and_quit(HttpResponse::kStatusInternalServerError);
-        return;
-    }
-
-    if (pid_ == 0) { // child process - setting up pipes
-        // closing the write end and replacing STDIN by the read end of the input pipe
-        if (saved_request_.method == "POST") {
-            close(input_fd_[1]);
-            dup2(input_fd_[0], STDIN_FILENO);
-            close(input_fd_[0]); // as now duplicated to STDIN
-        }
-        // closing the read end and replacing STDOUT by the write end of the output pipe
-        close(output_fd_[0]);
-        dup2(output_fd_[1], STDOUT_FILENO);
-        close(output_fd_[1]); // as now duplicated to STDOUT
-        execve(argv[0], argv, envp_.data());
-        // execve(argv[0], argv, envp.data());
-        _exit(1);
-    }
-    else {
-        // parent process - setting up pipes
-        // closing read end of input_fd
-        if (saved_request_.method == "POST") {
-            close(input_fd_[0]);
-            fcntl(input_fd_[1], F_SETFL, O_NONBLOCK);
-        }
-        // closing write end of the output_fd
-        close(output_fd_[1]);
-        fcntl(output_fd_[0], F_SETFL, O_NONBLOCK);
-    }
-}
-
-CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request,
-                       const RouteConfig& config)
+CgiHandler::CgiHandler(const std::string& path,
+                       const RouteConfig& rc, const HttpRequest& req)
     : path_(path),
-      saved_request_(saved_request),
-      config_(config),
+      rc_(rc),  
+      req_(req),
       headers_off_(0),
       output_body_off_(0),
       bytes_written_body_(0),
-      body_length_(saved_request.content_length),
+      body_length_(req.content_length),
       headers_parsed_(false),
       headers_sent_(false),
       eob_reached_(false),
@@ -189,7 +40,7 @@ CgiHandler::CgiHandler(const std::string& path, const HttpRequest& saved_request
     init_state();
 
     // STEP 1 - Check that file exisst and is executable
-    bool is_interpreter_cgi = !config_.shared.cgi.exec_path.empty();
+    bool is_interpreter_cgi = !rc.shared.cgi.exec_path.empty();
     if (validate_cgi_target(is_interpreter_cgi) != true)
         return;
 
@@ -217,9 +68,159 @@ CgiHandler::~CgiHandler()
     }
 }
 
+void CgiHandler::init_state()
+{
+    input_fd_[0] = -1;
+    input_fd_[1] = -1;
+    output_fd_[0] = -1;
+    output_fd_[1] = -1;
+}
+
+bool CgiHandler::validate_cgi_target(bool is_interpreter_cgi)
+{
+    struct stat sb;
+
+    // Script must exist and be a regular file
+    if (stat(path_.c_str(), &sb) == -1 || !S_ISREG(sb.st_mode)) {
+        set_res_and_quit(HttpResponse::kStatusForbidden);
+        return false;
+    }
+
+    if (!is_interpreter_cgi) {
+        // Direct CGI → script itself must be executable
+        if (access(path_.c_str(), X_OK) != 0) {
+            set_res_and_quit(HttpResponse::kStatusForbidden);
+            return false;
+        }
+    }
+    else {
+        // Interpreter CGI → interpreter must be executable
+        if (access(rc_.shared.cgi.exec_path.c_str(), X_OK) != 0) {
+            set_res_and_quit(HttpResponse::kStatusInternalServerError);
+            return false;
+        }
+    }
+    return true;
+}
+
+static std::vector<char*> make_envp(std::vector<std::string>& env)
+{
+    std::vector<char*> envp;
+    envp.reserve(env.size() + 1);
+
+    for (size_t i = 0; i < env.size(); ++i)
+        envp.push_back(const_cast<char*>(env[i].c_str()));
+
+    envp.push_back(NULL);
+    return envp;
+}
+
+std::vector<std::string> CgiHandler::build_env_strings() const
+{
+    std::vector<std::string> env;
+
+    env.push_back("REQUEST_METHOD=" + req_.method);
+    env.push_back("SERVER_PROTOCOL=HTTP/1.1");
+    env.push_back("PATH_INFO=/");
+    env.push_back("SCRIPT_NAME=" + req_.path);
+    env.push_back("QUERY_STRING=" + req_.query_string);
+    env.push_back("CONTENT_LENGTH=" + to_string(req_.content_length));
+    if (req_.method == "POST") {
+        env.push_back("CONTENT_TYPE=application/x-www-form-urlencoded");
+    }
+    env.push_back("SERVER_NAME=localhost"); // to be updated based on config
+
+    env.push_back("SERVER_PORT=" + to_string(WEBSERV_DEFAULT_PORT));
+    env.push_back("PATH=/usr/bin:/bin");
+
+    env.push_back("GATEWAY_INTERFACE=CGI/1.1");
+
+    env.push_back("REQUEST_URI=" + req_.path +
+                  (req_.query_string.empty() ? "" : "?" + req_.query_string));
+    env.push_back("REDIRECT_STATUS=200"); // VERY IMPORTANT
+
+    LOG(DEBUG) << "req_.path = " << req_.path;
+
+    for (size_t i = 0; i < env.size(); ++i) {
+        LOG(DEBUG) << "CGI ENV: " << env[i];
+    }
+
+    return (env);
+}
+
+void CgiHandler::build_exec_context(char** argv, bool is_interpreter_cgi)
+{
+    env_strings_ = build_env_strings();
+    envp_ = make_envp(env_strings_);
+
+    if (is_interpreter_cgi) {
+        // Interpreter-based CGI
+        argv[0] = const_cast<char*>(rc_.shared.cgi.exec_path.c_str());
+        argv[1] = const_cast<char*>(path_.c_str());
+        argv[2] = NULL;
+    }
+    else {
+        // Direct executable CGI (binary or shebang)
+        argv[0] = const_cast<char*>(path_.c_str());
+        argv[1] = NULL;
+    }
+}
+
+bool CgiHandler::setup_pipes()
+{
+    if (req_.method == "POST") {
+        if (pipe(input_fd_) == -1) {
+            set_res_and_quit(HttpResponse::kStatusInternalServerError);
+            return false;
+        }
+    }
+    if (pipe(output_fd_) == -1) {
+        set_res_and_quit(HttpResponse::kStatusInternalServerError);
+        return false;
+    }
+    return true;
+}
+
+void CgiHandler::spawn_child(char** argv)
+{
+    pid_ = fork();
+    if (pid_ == -1) {
+        set_res_and_quit(HttpResponse::kStatusInternalServerError);
+        return;
+    }
+
+    if (pid_ == 0) { // child process - setting up pipes
+        // closing the write end and replacing STDIN by the read end of the input pipe
+        if (req_.method == "POST") {
+            close(input_fd_[1]);
+            dup2(input_fd_[0], STDIN_FILENO);
+            close(input_fd_[0]); // as now duplicated to STDIN
+        }
+        // closing the read end and replacing STDOUT by the write end of the output pipe
+        close(output_fd_[0]);
+        dup2(output_fd_[1], STDOUT_FILENO);
+        close(output_fd_[1]); // as now duplicated to STDOUT
+        execve(argv[0], argv, envp_.data());
+        // execve(argv[0], argv, envp.data());
+        _exit(1);
+    }
+    else {
+        // parent process - setting up pipes
+        // closing read end of input_fd
+        if (req_.method == "POST") {
+            close(input_fd_[0]);
+            fcntl(input_fd_[1], F_SETFL, O_NONBLOCK);
+        }
+        // closing write end of the output_fd
+        close(output_fd_[1]);
+        fcntl(output_fd_[0], F_SETFL, O_NONBLOCK);
+    }
+}
+
 void CgiHandler::set_res_and_quit(HttpResponse::Status status)
 {
-    headers_ = HttpResponse::make_error(status, config_.shared.error_pages).to_string();
+    res_ = HttpResponse::make_error(status, rc_.shared.error_pages, req_);
+    headers_ = res_.to_string();
     headers_parsed_ = true;
     headers_sent_ = false;
     headers_off_ = 0;
