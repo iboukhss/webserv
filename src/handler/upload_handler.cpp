@@ -22,8 +22,8 @@ UploadHandler::UploadHandler(const std::string& path, const RouteConfig& rc, con
 
 {
     if (req.content_length == 0) {
-        //set_error(HttpResponse::kStatusBadRequest);
-        //set_error(HttpResponse::kStatusNoContent);
+        // set_error(HttpResponse::kStatusBadRequest);
+        // set_error(HttpResponse::kStatusNoContent);
         set_error(HttpResponse::kStatusOk);
         return;
     }
