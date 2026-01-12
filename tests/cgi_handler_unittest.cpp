@@ -202,8 +202,8 @@ UTEST(CgiHandler, NotExecutable)
 
 UTEST(CgiHandler, EmptyOutput)
 {
-    TempCgiScript script("echo \"Content-Type: text/html; charset=UTF-8\"\n"
-                         "echo\n");
+    TempCgiScript script(
+        "echo\n""echo\n");
     RouteConfig rc;
     HttpRequest req;
     req.method = "GET";

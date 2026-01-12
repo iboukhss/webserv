@@ -21,6 +21,12 @@ UploadHandler::UploadHandler(const std::string& path, const RouteConfig& rc, con
       fd_(-1)
 
 {
+    if (req.content_length == 0) {
+        //set_error(HttpResponse::kStatusBadRequest);
+        //set_error(HttpResponse::kStatusNoContent);
+        set_error(HttpResponse::kStatusOk);
+        return;
+    }
     struct stat file_stat;
     if (stat(path.c_str(), &file_stat) == 0 && S_ISREG(file_stat.st_mode)) {
         set_error(HttpResponse::kStatusConflict); // file already exists
