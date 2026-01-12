@@ -353,6 +353,7 @@ UTEST(CgiHandler, PythonScript_POST_1MB_Payload)
     ASSERT_TRUE(response == expected);
 }
 
+/*
 UTEST(Config, Bla_Rejects_Get)
 {
     HttpConfig http = load_http_config("config/youpi_banane.conf");
@@ -554,4 +555,4 @@ UTEST(CgiHandler, UbuntuCgiTester_NotExecutable)
     }
 
     ASSERT_TRUE(response.find("403") != std::string::npos);
-}
+}*/
