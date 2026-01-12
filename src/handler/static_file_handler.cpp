@@ -70,17 +70,14 @@ static const char* derive_file_type(const std::string& file_path)
     return "application/octet-stream";
 }
 
-void StaticFileHandler::set_error(const HttpResponse::Status code, const RouteConfig& rc)
-{
-    res_ = HttpResponse::make_error(code, rc.shared.error_pages);
-    out_buf_ = res_.to_string();
-}
-
-StaticFileHandler::StaticFileHandler(const std::string& path, const RouteConfig& rc)
-    : fd_(-1),
+StaticFileHandler::StaticFileHandler(const std::string& path, const RouteConfig& rc, const HttpRequest &req)
+    : path_(path),
       rc_(rc),
+      req_(req),
+      out_off_(0),
       file_size_(0),
-      out_off_(0)
+      fd_(-1)
+      
 {
 
     if (rc.shared.index_files.empty())
@@ -88,19 +85,19 @@ StaticFileHandler::StaticFileHandler(const std::string& path, const RouteConfig&
     std::string full_path = resolve_path(path, rc.shared.index_files);
     if (full_path.empty()) {
         LOG(ERROR) << "Couldn't open file " << path;
-        set_error(HttpResponse::kStatusNotFound, rc_);
+        set_error(HttpResponse::kStatusNotFound);
         return;
     }
     struct stat file_stat;
     fd_ = open(full_path.data(), O_RDONLY);
     if (fd_ == -1) {
-        set_error(HttpResponse::kStatusInternalServerError, rc_);
+        set_error(HttpResponse::kStatusInternalServerError);
         return;
     }
     stat(full_path.data(), &file_stat);
     file_size_ = file_stat.st_size;
     std::string file_type = derive_file_type(full_path);
-    res_ = HttpResponse::make_response_headers_only(HttpResponse::kStatusOk, file_type, file_size_);
+    res_ = HttpResponse::make_response_headers_only(HttpResponse::kStatusOk, file_type, file_size_, req_);
     out_buf_ = res_.to_string();
 }
 
@@ -144,4 +141,10 @@ size_t StaticFileHandler::write_input(const char* buf, size_t n)
     (void) buf;
     (void) n;
     return 0;
+}
+
+void StaticFileHandler::set_error(const HttpResponse::Status code)
+{
+    res_ = HttpResponse::make_error(code, rc_.shared.error_pages, req_);
+    out_buf_ = res_.to_string();
 }

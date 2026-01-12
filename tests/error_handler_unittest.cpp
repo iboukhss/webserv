@@ -9,35 +9,40 @@
 UTEST(ErrorHandlerTest, is_done)
 {
     RouteConfig rc;
-    ErrorHandler handler(HttpResponse::kStatusBadRequest, rc);
+    HttpRequest req;
+    ErrorHandler handler(HttpResponse::kStatusBadRequest, rc, req);
     ASSERT_FALSE(handler.is_done());
 }
 
 UTEST(ErrorHandlerTest, has_output)
 {
     RouteConfig rc;
-    ErrorHandler handler(HttpResponse::kStatusNotFound, rc);
+    HttpRequest req;
+    ErrorHandler handler(HttpResponse::kStatusNotFound, rc, req);
     ASSERT_TRUE(handler.has_output());
 }
 
 UTEST(ErrorHandlerTest, needs_input)
 {
     RouteConfig rc;
-    ErrorHandler handler(HttpResponse::kStatusInternalServerError, rc);
+    HttpRequest req;
+    ErrorHandler handler(HttpResponse::kStatusInternalServerError, rc, req);
     ASSERT_FALSE(handler.needs_input());
 }
 
 UTEST(ErrorHandlerTest, error_code)
 {
     RouteConfig rc;
-    ErrorHandler handler(HttpResponse::kStatusInternalServerError, rc);
+    HttpRequest req;
+    ErrorHandler handler(HttpResponse::kStatusInternalServerError, rc, req);
     ASSERT_EQ(handler.error_code(), 500);
 }
 
 UTEST(ErrorHandlerTest, make_error_html)
 {
     RouteConfig rc;
-    ErrorHandler handler(HttpResponse::kStatusInternalServerError, rc);
+    HttpRequest req;
+    ErrorHandler handler(HttpResponse::kStatusInternalServerError, rc, req);
 
     char buf[1028];
     size_t n;
@@ -48,7 +53,7 @@ UTEST(ErrorHandlerTest, make_error_html)
     }
     ASSERT_EQ(handler.error_code(), 500);
     std::string expected =
-        HttpResponse::make_error(HttpResponse::kStatusInternalServerError, rc.shared.error_pages)
+        HttpResponse::make_error(HttpResponse::kStatusInternalServerError, rc.shared.error_pages, req)
             .to_string();
     ASSERT_STREQ(error_html.data(), expected.data());
 }
@@ -56,11 +61,11 @@ UTEST(ErrorHandlerTest, make_error_html)
 UTEST(ErrorHandlerTest, error_html_uses_custom_error_page_mapping)
 {
     RouteConfig rc;
-
+    HttpRequest req;
     rc.shared.error_pages[HttpResponse::kStatusInternalServerError] =
         "<html><body>CUSTOM_500_MARKER</body></html>";
 
-    ErrorHandler handler(HttpResponse::kStatusInternalServerError, rc);
+    ErrorHandler handler(HttpResponse::kStatusInternalServerError, rc, req);
 
     char buf[1028];
     std::string out;
@@ -72,7 +77,7 @@ UTEST(ErrorHandlerTest, error_html_uses_custom_error_page_mapping)
     ASSERT_TRUE(out.find("CUSTOM_500_MARKER") != std::string::npos);
 
     std::string expected =
-        HttpResponse::make_error(HttpResponse::kStatusInternalServerError, rc.shared.error_pages)
+        HttpResponse::make_error(HttpResponse::kStatusInternalServerError, rc.shared.error_pages, req)
             .to_string();
     ASSERT_STREQ(out.c_str(), expected.c_str());
 }

@@ -12,28 +12,23 @@
 #include <iostream>
 #include <sstream>
 
-void UploadHandler::set_error(const HttpResponse::Status code, const RouteConfig& rc)
-{
-    res_ = HttpResponse::make_error(code, rc.shared.error_pages);
-    out_buf_ = res_.to_string();
-}
-
-UploadHandler::UploadHandler(const std::string& path, const RouteConfig& rc, size_t content_length)
-    : fd_(-1),
+UploadHandler::UploadHandler(const std::string& path, const RouteConfig& rc, const HttpRequest &req)
+    : path_(path),
       rc_(rc),
+      req_(req),
+      out_off_(0),
       bytes_written_(0),
-      content_length_(content_length),
-      out_off_(0)
+      fd_(-1)
+      
 {
     struct stat file_stat;
     if (stat(path.c_str(), &file_stat) == 0 && S_ISREG(file_stat.st_mode)) {
-        set_error(HttpResponse::kStatusConflict, rc); // file already exists
+        set_error(HttpResponse::kStatusConflict); // file already exists
         return;
     }
     fd_ = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd_ == -1) {
-        set_error(HttpResponse::kStatusConflict,
-                  rc); // file could not be truncated
+        set_error(HttpResponse::kStatusConflict); // file could not be truncated
         return;
     }
 }
@@ -61,18 +56,24 @@ size_t UploadHandler::write_input(const char* buf, size_t n)
     ssize_t bytes = write(fd_, buf, n);
     if (bytes < 0) {
         if (out_buf_.empty()) {
-            set_error(HttpResponse::kStatusDiskFull, rc_);
+            set_error(HttpResponse::kStatusDiskFull);
         }
-        bytes_written_ = content_length_; // to ensure needs_input returns false
+        bytes_written_ = req_.content_length; // to ensure needs_input returns false
         return 0;
     }
     bytes_written_ += bytes;
-    if (bytes_written_ < content_length_) {
+    if (bytes_written_ < req_.content_length) {
         return (bytes);
     }
     if (out_buf_.empty()) {
-        res_ = HttpResponse::make_response_headers_only(HttpResponse::kStatusCreated, "", 0);
+        res_ = HttpResponse::make_response_headers_only(HttpResponse::kStatusCreated, "", 0, req_);
         out_buf_ = res_.to_string();
     }
     return (0);
+}
+
+void UploadHandler::set_error(const HttpResponse::Status code)
+{
+    res_ = HttpResponse::make_error(code, rc_.shared.error_pages, req_);
+    out_buf_ = res_.to_string();
 }

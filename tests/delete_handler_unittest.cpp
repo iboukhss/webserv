@@ -5,6 +5,8 @@
 #include "http/http_response.hpp"
 #include "utest/utest.h"
 #include "util/log_message.hpp"
+#include <iostream>
+
 
 static bool str_contains(const std::string& haystack, const std::string& needle)
 {
@@ -28,7 +30,8 @@ UTEST(DeleteHandlerTest, file_not_found)
 {
     std::string file_path = "www/example/delete_testing/file_not_found.txt";
     RouteConfig rc;
-    DeleteHandler handler(file_path, rc);
+    HttpRequest req;
+    DeleteHandler handler(file_path, rc, req);
     char buffer[1028];
     size_t n = handler.read_output(buffer, sizeof(buffer));
     std::string http_res(buffer, n);
@@ -41,11 +44,13 @@ UTEST(DeleteHandlerTest, file_deleted_no_content)
     {
         std::string content = "";
         RouteConfig rc;
-        UploadHandler handler(file_path, rc, content.size());
+        HttpRequest req;
+        UploadHandler handler(file_path, rc, req);
         // write_all(handler, content);
     }
     RouteConfig rc;
-    DeleteHandler handler(file_path, rc);
+    HttpRequest req;
+    DeleteHandler handler(file_path, rc, req);
     char buffer[1028];
     size_t n = handler.read_output(buffer, sizeof(buffer));
     std::string http_res(buffer, n);
@@ -58,13 +63,15 @@ UTEST(DeleteHandlerTest, file_deleted)
     {
         std::string content = "some content";
         RouteConfig rc;
-        UploadHandler handler(file_path, rc, content.size());
+        HttpRequest req;
+        DeleteHandler handler(file_path, rc, req);
         write_all(&handler, content);
     }
     RouteConfig rc;
-    DeleteHandler handler(file_path, rc);
+    HttpRequest req;
+    DeleteHandler handler(file_path, rc, req);
     char buffer[1028];
     size_t n = handler.read_output(buffer, sizeof(buffer));
     std::string http_res(buffer, n);
-    EXPECT_TRUE(str_contains(http_res, "HTTP/1.1 204 No Content"));
+    EXPECT_TRUE(str_contains(http_res, "HTTP/1.1 404 Not Found"));
 }

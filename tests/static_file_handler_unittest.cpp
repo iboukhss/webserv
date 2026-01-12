@@ -16,8 +16,9 @@ static bool str_contains(const std::string& haystack, const std::string& needle)
 
 UTEST(StaticFileHandlerTest, StatusOk)
 {
-    RouteConfig dummy_config;
-    StaticFileHandler test("www/example/index.html", dummy_config);
+    RouteConfig rc;
+    HttpRequest req;
+    StaticFileHandler test("www/example/index.html", rc, req);
 
     char buf[4096] = {0};
     size_t n = test.read_output(buf, sizeof(buf));
@@ -31,8 +32,9 @@ UTEST(StaticFileHandlerTest, StatusOk)
 
 UTEST(StaticFileHandlerTest, StatusNotFound)
 {
-    RouteConfig dummy_config;
-    StaticFileHandler test("www/example/inexistant.html", dummy_config);
+    RouteConfig rc;
+    HttpRequest req;
+    StaticFileHandler test("www/example/inexistant.html", rc, req);
 
     char buf[4096] = {0};
     size_t n = test.read_output(buf, sizeof(buf));
@@ -44,8 +46,9 @@ UTEST(StaticFileHandlerTest, StatusNotFound)
 
 UTEST(StaticFileHandlerTest, ReadSomeData)
 {
-    RouteConfig dummy_config;
-    StaticFileHandler test("", dummy_config);
+    RouteConfig rc;
+    HttpRequest req;
+    StaticFileHandler test("", rc, req);
 
     char buf[4096] = {0};
 
@@ -56,8 +59,9 @@ UTEST(StaticFileHandlerTest, ReadSomeData)
 
 UTEST(StaticFileHandlerTest, WriteNoData)
 {
-    RouteConfig dummy_config;
-    StaticFileHandler test("", dummy_config);
+    RouteConfig rc;
+    HttpRequest req;
+    StaticFileHandler test("", rc, req);
     char msg[] = "Hello, world!\n";
 
     EXPECT_TRUE(test.has_output());
@@ -67,8 +71,9 @@ UTEST(StaticFileHandlerTest, WriteNoData)
 
 UTEST(StaticFileHandlerTest, SmallBuffer)
 {
-    RouteConfig dummy_config;
-    StaticFileHandler test("www/example/index.html", dummy_config);
+    RouteConfig rc;
+    HttpRequest req;
+    StaticFileHandler test("www/example/index.html", rc, req);
 
     char buf[1] = {0};
     std::string response;

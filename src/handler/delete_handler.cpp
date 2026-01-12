@@ -12,28 +12,21 @@
 #include <iostream>
 #include <sstream>
 
-void DeleteHandler::set_error(const HttpResponse::Status code, const RouteConfig& rc)
-{
-    res_ = HttpResponse::make_error(code, rc.shared.error_pages);
-    out_buf_ = res_.to_string();
-}
-
-DeleteHandler::DeleteHandler(const std::string& path, const RouteConfig& rc)
-    : file_path_(path),
-      out_off_(0)
+DeleteHandler::DeleteHandler(const std::string& path, const RouteConfig& rc, const HttpRequest &req)
+    : path_(path), rc_(rc), req_(req), out_off_(0)
 {
     struct stat file_stat;
     if (stat(path.data(), &file_stat) != 0 || !S_ISREG(file_stat.st_mode)) {
-        set_error(HttpResponse::kStatusNotFound, rc);
+        set_error(HttpResponse::kStatusNotFound);
         return;
     }
     int n = remove(path.c_str());
     if (n == -1) {
-        set_error(HttpResponse::kStatusInternalServerError, rc);
+        set_error(HttpResponse::kStatusInternalServerError);
         return;
     }
     res_ = HttpResponse::make_response_headers_only(HttpResponse::kStatusNoContent,
-                                                    "text/html; charset=UTF-8", 0);
+                                                    "text/html; charset=UTF-8", 0, req_);
     out_buf_ = res_.to_string();
 }
 
@@ -59,4 +52,10 @@ size_t DeleteHandler::write_input(const char* buf, size_t n)
     (void) buf;
     (void) n;
     return 0;
+}
+
+void DeleteHandler::set_error(const HttpResponse::Status code)
+{
+    res_ = HttpResponse::make_error(code, rc_.shared.error_pages, req_);
+    out_buf_ = res_.to_string();
 }
