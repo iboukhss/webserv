@@ -211,7 +211,6 @@ UTEST(CgiHandler, EmptyOutput)
     req.query_string = "";
     req.content_length = 0;
 
-
     CgiHandler handler(script.path(), rc, req);
 
     char buf[128];
@@ -222,7 +221,8 @@ UTEST(CgiHandler, EmptyOutput)
         if (n > 0)
             response.append(buf, n);
     }
-    HttpResponse res = HttpResponse::make_response_headers_only(HttpResponse::kStatusOk, "", 0, req);
+    HttpResponse res =
+        HttpResponse::make_response_headers_only(HttpResponse::kStatusOk, "", 0, req);
     std::string expected = res.to_string();
     print_response_expected(response, expected);
     ASSERT_TRUE(response == expected);
@@ -238,8 +238,6 @@ UTEST(CgiHandler, PythonScript_GET)
     req.path = script;
     req.query_string = query;
     req.content_length = 0;
-
-
 
     CgiHandler handler(script, rc, req);
 

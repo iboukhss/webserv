@@ -11,7 +11,7 @@
 
 class DeleteHandler : public Handler {
 public:
-    explicit DeleteHandler(const std::string& path, const RouteConfig& rc, const HttpRequest &req);
+    explicit DeleteHandler(const std::string& path, const RouteConfig& rc, const HttpRequest& req);
     virtual ~DeleteHandler();
 
     virtual size_t read_output(char* buf, size_t n);
@@ -31,16 +31,15 @@ private:
     DeleteHandler(const DeleteHandler&);
     DeleteHandler& operator=(const DeleteHandler&);
 
-    //constructor args
-    const std::string &path_;
+    // constructor args
+    const std::string& path_;
     const RouteConfig& rc_;
-    const HttpRequest &req_;
-    //Response built
+    const HttpRequest& req_;
+    // Response built
     HttpResponse res_;
-    //Serialized response and offset
+    // Serialized response and offset
     std::string out_buf_;
     size_t out_off_;
-
 };
 
 #endif

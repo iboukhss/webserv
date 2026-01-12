@@ -63,13 +63,13 @@ private:
     bool setup_pipes();
     void spawn_child(char** argv);
 
-    //constructor args
+    // constructor args
     const std::string path_;
     const RouteConfig& rc_;
     const HttpRequest& req_;
-    //Response built
+    // Response built
     HttpResponse res_;
-    //Serialized response and offset
+    // Serialized response and offset
     std::string out_buf_;
     size_t out_off_;
 

@@ -5,8 +5,8 @@
 #include "http/http_response.hpp"
 #include "utest/utest.h"
 #include "util/log_message.hpp"
-#include <iostream>
 
+#include <iostream>
 
 static bool str_contains(const std::string& haystack, const std::string& needle)
 {

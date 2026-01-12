@@ -18,10 +18,9 @@
 
 static std::vector<char*> make_envp(std::vector<std::string>& env);
 
-CgiHandler::CgiHandler(const std::string& path,
-                       const RouteConfig& rc, const HttpRequest& req)
+CgiHandler::CgiHandler(const std::string& path, const RouteConfig& rc, const HttpRequest& req)
     : path_(path),
-      rc_(rc),  
+      rc_(rc),
       req_(req),
       headers_off_(0),
       output_body_off_(0),

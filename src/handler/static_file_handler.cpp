@@ -70,14 +70,16 @@ static const char* derive_file_type(const std::string& file_path)
     return "application/octet-stream";
 }
 
-StaticFileHandler::StaticFileHandler(const std::string& path, const RouteConfig& rc, const HttpRequest &req)
+StaticFileHandler::StaticFileHandler(const std::string& path,
+                                     const RouteConfig& rc,
+                                     const HttpRequest& req)
     : path_(path),
       rc_(rc),
       req_(req),
       out_off_(0),
       file_size_(0),
       fd_(-1)
-      
+
 {
 
     if (rc.shared.index_files.empty())
@@ -97,7 +99,8 @@ StaticFileHandler::StaticFileHandler(const std::string& path, const RouteConfig&
     stat(full_path.data(), &file_stat);
     file_size_ = file_stat.st_size;
     std::string file_type = derive_file_type(full_path);
-    res_ = HttpResponse::make_response_headers_only(HttpResponse::kStatusOk, file_type, file_size_, req_);
+    res_ = HttpResponse::make_response_headers_only(
+        HttpResponse::kStatusOk, file_type, file_size_, req_);
     out_buf_ = res_.to_string();
 }
 

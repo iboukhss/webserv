@@ -2,8 +2,8 @@
 #define HTTP_HTTP_RESPONSE_HPP_
 
 #include "core/server_defaults.hpp"
-#include "http/http_version.hpp"
 #include "http/http_request.hpp"
+#include "http/http_version.hpp"
 
 #include <map>
 #include <string>
@@ -31,13 +31,14 @@ public:
     explicit HttpResponse(HttpVersion protocol = WEBSERV_DEFAULT_HTTP_VERSION);
     static Status status_from_int(int code);
     static HttpResponse make_error(HttpResponse::Status status,
-                                   const std::map<HttpResponse::Status, std::string>& error_pages, const HttpRequest &req);
+                                   const std::map<HttpResponse::Status, std::string>& error_pages,
+                                   const HttpRequest& req);
     static HttpResponse make_response_headers_only(HttpResponse::Status status,
                                                    const std::string& content_type,
-                                                   size_t content_length, const HttpRequest &req);
+                                                   size_t content_length, const HttpRequest& req);
     static HttpResponse make_response_with_body(HttpResponse::Status status,
                                                 const std::string& content_type,
-                                                const std::string& body, const HttpRequest &req);
+                                                const std::string& body, const HttpRequest& req);
 
     HttpVersion http_version;
     HttpResponse::Status code;
