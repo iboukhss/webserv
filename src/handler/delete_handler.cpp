@@ -28,8 +28,7 @@ DeleteHandler::DeleteHandler(const std::string& path, const RouteConfig& rc, con
         set_error(HttpResponse::kStatusInternalServerError);
         return;
     }
-    res_ = HttpResponse::make_response_headers_only(HttpResponse::kStatusNoContent,
-                                                    "text/html; charset=UTF-8", 0, req_);
+    res_ = HttpResponse::make_response_headers_only(HttpResponse::kStatusNoContent, "", 0, req_);
     out_buf_ = res_.to_string();
 }
 
