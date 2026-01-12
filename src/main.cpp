@@ -10,7 +10,7 @@ int main(void)
     setup_signal_handlers();
 
     try {
-        HttpConfig cfg = load_http_config("config/vitepress.conf");
+        HttpConfig cfg = load_http_config("config/youpi_banane.conf");
 
         Server server(cfg.servers[0]);
         server.init();
