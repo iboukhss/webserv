@@ -45,16 +45,16 @@ UTEST(ErrorHandlerTest, make_error_html)
     ErrorHandler handler(HttpResponse::kStatusInternalServerError, rc, req);
 
     char buf[1028];
-    size_t n;
+    size_t n = 0;
     std::string error_html;
     while (handler.has_output()) {
         n = handler.read_output(buf, sizeof(buf));
         error_html.append(buf, n);
     }
     ASSERT_EQ(handler.error_code(), 500);
-    std::string expected =
-        HttpResponse::make_error(HttpResponse::kStatusInternalServerError, rc.shared.error_pages, req)
-            .to_string();
+    std::string expected = HttpResponse::make_error(HttpResponse::kStatusInternalServerError,
+                                                    rc.shared.error_pages, req)
+                               .to_string();
     ASSERT_STREQ(error_html.data(), expected.data());
 }
 
@@ -76,8 +76,8 @@ UTEST(ErrorHandlerTest, error_html_uses_custom_error_page_mapping)
 
     ASSERT_TRUE(out.find("CUSTOM_500_MARKER") != std::string::npos);
 
-    std::string expected =
-        HttpResponse::make_error(HttpResponse::kStatusInternalServerError, rc.shared.error_pages, req)
-            .to_string();
+    std::string expected = HttpResponse::make_error(HttpResponse::kStatusInternalServerError,
+                                                    rc.shared.error_pages, req)
+                               .to_string();
     ASSERT_STREQ(out.c_str(), expected.c_str());
 }
