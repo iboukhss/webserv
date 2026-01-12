@@ -38,6 +38,7 @@ static const HttpStatusInfo kStatusTable[] = {
     { 409, "Conflict" },
     { 500, "Internal Server Error" },
     { 501, "Not Implemented" },
+    { 502, "Bad Gateway"},
     { 507, "Disk Full" }
 };
 /* clang-format on */
