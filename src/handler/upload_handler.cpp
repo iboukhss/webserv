@@ -19,7 +19,7 @@ UploadHandler::UploadHandler(const std::string& path, const RouteConfig& rc, con
       out_off_(0),
       bytes_written_(0),
       fd_(-1),
-      eof_(false)
+      done_(false)
 
 {
     if (req.content_length == 0) {
@@ -68,7 +68,7 @@ size_t UploadHandler::write_input(const char* buf, size_t n)
         if (out_buf_.empty()) {
             set_error(HttpResponse::kStatusDiskFull);
         }
-        eof_ = true; // to ensure needs_input returns false
+        done_ = true; // to ensure needs_input returns false
         return 0;
     }
     bytes_written_ += bytes;
@@ -82,7 +82,7 @@ size_t UploadHandler::write_input(const char* buf, size_t n)
     if (out_buf_.empty()) {
         res_ = HttpResponse::make_response_headers_only(HttpResponse::kStatusCreated, "", 0, req_);
         out_buf_ = res_.to_string();
-        eof_ = true;
+        done_ = true;
     }
     return (0);
 }
@@ -91,5 +91,5 @@ void UploadHandler::set_error(const HttpResponse::Status code)
 {
     res_ = HttpResponse::make_error(code, rc_.shared.error_pages, req_);
     out_buf_ = res_.to_string();
-    eof_ = true;
+    done_ = true;
 }
