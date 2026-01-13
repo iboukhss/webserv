@@ -3,17 +3,30 @@
 
 #include <cstdio>
 
-static void write_all(Handler& handler, const std::string& content)
+static size_t write_all(Handler& handler, const std::string& content)
 {
     size_t written = 0;
 
-    while (handler.needs_input()) {
+    while (!handler.is_done() && handler.needs_input()) {
         size_t n = handler.write_input(content.c_str() + written, content.size() - written);
         written += n;
 
         if ((n == 0 && handler.needs_input()))
             break;
     }
+    return written;
+}
+
+UTEST(UploadHandlerTest, is_done_upload_ongoing)
+{
+    std::string upload_path = "www/example/needs_input_upload_ongoing.txt";
+    std::string content = "some content to be written to the file";
+    RouteConfig rc;
+    HttpRequest req;
+    req.content_length = content.size();
+    UploadHandler handler(upload_path, rc, req);
+    ASSERT_FALSE(handler.is_done());
+    std::remove(upload_path.c_str());
 }
 
 UTEST(UploadHandlerTest, needs_input_upload_ongoing)
@@ -134,4 +147,19 @@ UTEST(UploadHandlerTest, ReturnsFileAlreadyExists)
 UTEST(UploadHandlerTest, return_507)
 {
     UTEST_SKIP("TODO: Test Disk full without making your machine explode");
+}
+
+UTEST(UploadHandlerTest, max_body_size)
+{
+    std::string upload_path = "www/example/needs_input_upload_done.txt";
+    std::string content = "some content to be written to the file";
+    RouteConfig rc;
+    rc.shared.max_body_size = 5;
+    HttpRequest req;
+    req.content_length = content.size();
+    ASSERT_TRUE(req.content_length > rc.shared.max_body_size);
+    UploadHandler handler(upload_path, rc, req);
+    size_t n = write_all(handler, content);
+    ASSERT_TRUE(n < req.content_length);
+    std::remove(upload_path.c_str());
 }
