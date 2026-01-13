@@ -3,92 +3,111 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>webserv evaluation demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>webserv — File Box</title>
     <link rel="stylesheet" href="/style.css" />
 </head>
 
 <body>
+    <main class="wrap">
+        <header class="top">
+            <div>
+                <h1>File Box</h1>
+                <p class="sub">
+                    Upload and delete files in one folder: <code>/upload/</code>
+                </p>
+            </div>
+            <div class="pill">webserv eval</div>
+        </header>
 
-    <h1>webserv evaluation demo</h1>
-    <p>This website demonstrates <b>GET</b>, <b>POST</b>, <b>DELETE</b> and <b>CGI</b> features.</p>
+        <section class="card">
+            <h2>Quick GET sanity check</h2>
+            <p class="muted">Static file (should always work):</p>
+            <p><a class="link" href="/assets/hello.txt">GET /assets/hello.txt</a></p>
+        </section>
 
-    <section>
-        <h2>GET – Static files</h2>
-        <ul>
-            <li><a href="/assets/hello.txt">GET /assets/hello.txt</a></li>
-        </ul>
-    </section>
+        <section class="card">
+            <h2>Upload to <code>/upload/</code></h2>
+            <p class="muted">
+                Select a file and upload it. The server should store it under
+                <code>www/eval/upload/&lt;filename&gt;</code>.
+            </p>
 
-    <section>
-        <h2>GET – CGI</h2>
-        <ul>
-            <li>
-                <a href="/cgi-bin/env.bla">GET /cgi-bin/env.bla</a>
-                <br><small>Displays CGI environment variables</small>
-            </li>
-            <li>
-                <a href="/cgi-py/upper.py?hello=world">
-                    GET /cgi-py/upper.py?hello=world
-                </a>
-                <br><small>Python CGI (uppercases query string)</small>
-            </li>
-        </ul>
-    </section>
+            <form class="row" method="post" action="/upload/" enctype="multipart/form-data">
+                <input class="file" type="file" name="file" required />
+                <button class="btn" type="submit">Upload</button>
+            </form>
 
-    <section>
-        <h2>POST – Simple body endpoint</h2>
-        <p>POST request to <code>/post_body</code> (server-side handler).</p>
-        <form method="post" action="/post_body" enctype="text/plain">
-            <textarea name="data" rows="5" cols="60">Hello from POST body</textarea><br>
-            <button type="submit">POST to /post_body</button>
-        </form>
-    </section>
+            <details class="details">
+                <summary>Equivalent curl</summary>
+                <pre class="code">curl -i -X POST http://localhost:8080/upload/ \
+  -F "file=@./myfile.txt"</pre>
+            </details>
+        </section>
 
-    <section>
-        <h2>POST – CGI (binary or shell)</h2>
-        <form method="post" action="/cgi-bin/echo.bla">
-            <input name="msg" value="hello cgi-bin">
-            <button type="submit">POST to /cgi-bin/echo.bla</button>
-        </form>
-    </section>
+        <section class="card">
+            <h2>Delete from <code>/upload/</code></h2>
+            <p class="muted">
+                Enter the exact filename to delete. No listing — you remember the name.
+            </p>
 
-    <section>
-        <h2>POST – Python CGI</h2>
-        <p>Python CGI script uppercases request body.</p>
-        <form method="post" action="/cgi-py/upper.bla">
-            <input name="text" value="hello evaluator">
-            <button type="submit">POST to Python CGI</button>
-        </form>
-    </section>
+            <div class="row">
+                <input class="text" id="delname" type="text" placeholder="example.txt" autocomplete="off" />
+                <button class="btn danger" id="delbtn" type="button">Delete</button>
+            </div>
 
-    <section>
-        <h2>DELETE</h2>
-        <p>Target file: <code>/delete_me/victim.txt</code></p>
-        <pre>
-curl -i -X DELETE http://localhost:8080/delete_me/victim.txt
-  </pre>
-    </section>
+            <p class="muted small">
+                Sends: <code>DELETE /upload/&lt;name&gt;</code>
+            </p>
 
-    <section>
-        <h2>Quick curl commands</h2>
-        <pre>
-# GET static
-curl -i http://localhost:8080/assets/hello.txt
+            <details class="details">
+                <summary>Equivalent curl</summary>
+                <pre class="code">curl -i -X DELETE "http://localhost:8080/upload/example.txt"</pre>
+            </details>
+        </section>
 
-# GET Python CGI
-curl -i "http://localhost:8080/cgi-py/upper.bla?abc=def"
+        <section class="card">
+            <h2>Extra (optional) curl tests</h2>
+            <pre class="code"># GET uploaded file by name (optional if you serve /upload/)
+curl -i http://localhost:8080/upload/example.txt
 
-# POST body
-curl -i -X POST http://localhost:8080/post_body -d "abc=123"
+# Upload
+curl -i -X POST http://localhost:8080/upload/ -F "file=@./example.txt"
 
-# POST Python CGI
-curl -i -X POST http://localhost:8080/cgi-py/upper.bla -d "hello world"
+# Delete (same folder)
+curl -i -X DELETE http://localhost:8080/upload/example.txt
 
-# DELETE
-curl -i -X DELETE http://localhost:8080/delete_me/victim.txt
-  </pre>
-    </section>
+# Keep your old DELETE test file if you want
+curl -i -X DELETE http://localhost:8080/delete_me/victim.txt</pre>
+        </section>
 
+        <footer class="foot">
+            <span class="muted">CGI intentionally omitted for now.</span>
+        </footer>
+    </main>
+
+    <script>
+        const input = document.getElementById("delname");
+        const btn = document.getElementById("delbtn");
+
+        btn.addEventListener("click", async () => {
+            const name = (input.value || "").trim();
+            if (!name) {
+                alert("Enter a filename to delete (e.g. example.txt).");
+                return;
+            }
+
+            const url = "/upload/" + encodeURIComponent(name);
+
+            try {
+                const res = await fetch(url, { method: "DELETE" });
+                const text = await res.text();
+                alert(`DELETE ${url}\nStatus: ${res.status}\n\n${text.slice(0, 400)}`);
+            } catch (e) {
+                alert("Request failed: " + e);
+            }
+        });
+    </script>
 </body>
 
 </html>
