@@ -87,3 +87,102 @@ UTEST(StaticFileHandlerTest, SmallBuffer)
     EXPECT_TRUE(str_contains(response, "<!DOCTYPE html>"
                                        "<html><head><title>Example</title></head></html>\n"));
 }
+
+UTEST(StaticFileHandlerTest, is_done)
+{
+    RouteConfig rc;
+    HttpRequest req;
+    StaticFileHandler test("www/example/index.html", rc, req);
+
+    char buf[1] = {0};
+    std::string response;
+
+    while (!test.is_done() && test.has_output()) {
+        test.read_output(buf, sizeof(buf));
+        response.append(buf, 1);
+    }
+
+    EXPECT_TRUE(str_contains(response, "HTTP/1.1 200 OK"));
+    EXPECT_TRUE(str_contains(response, "Content-Length: 64"));
+    EXPECT_TRUE(str_contains(response, "<!DOCTYPE html>"
+                                       "<html><head><title>Example</title></head></html>\n"));
+}
+UTEST(StaticFileHandlerTest, needs_input)
+{
+    RouteConfig rc;
+    HttpRequest req;
+    StaticFileHandler test("www/example/index.html", rc, req);
+    EXPECT_FALSE(test.needs_input());
+}
+
+UTEST(StaticFileHandlerTest, dir_autoindex_off_with_index_file)
+{
+    RouteConfig rc;
+    rc.shared.autoindex_enabled = false;
+    HttpRequest req;
+    StaticFileHandler test("www/example/", rc, req);
+
+    char buf[1] = {0};
+    std::string response;
+
+    while (!test.is_done() && test.has_output()) {
+        test.read_output(buf, sizeof(buf));
+        response.append(buf, 1);
+    }
+    // std::cout << response << std::endl;
+    EXPECT_TRUE(str_contains(response, "HTTP/1.1 200 OK"));
+}
+
+UTEST(StaticFileHandlerTest, dir_autoindex_off_no_index_file)
+{
+    RouteConfig rc;
+    rc.shared.autoindex_enabled = false;
+    HttpRequest req;
+    StaticFileHandler test("www/example/bin/", rc, req);
+
+    char buf[1] = {0};
+    std::string response;
+
+    while (!test.is_done() && test.has_output()) {
+        test.read_output(buf, sizeof(buf));
+        response.append(buf, 1);
+    }
+    // std::cout << response << std::endl;
+    EXPECT_TRUE(str_contains(response, "HTTP/1.1 403 Forbidden"));
+}
+
+UTEST(StaticFileHandlerTest, dir_autoindex_on_no_index_file)
+{
+    RouteConfig rc;
+    rc.shared.autoindex_enabled = true;
+    HttpRequest req;
+    StaticFileHandler test("www/example/bin/", rc, req);
+
+    char buf[1] = {0};
+    std::string response;
+
+    while (!test.is_done() && test.has_output()) {
+        test.read_output(buf, sizeof(buf));
+        response.append(buf, 1);
+    }
+    // std::cout << response << std::endl;
+    EXPECT_TRUE(str_contains(response, "HTTP/1.1 200 OK"));
+}
+
+UTEST(StaticFileHandlerTest, dir_autoindex_on_no_index_file_redirection)
+{
+    RouteConfig rc;
+    rc.shared.autoindex_enabled = true;
+    HttpRequest req;
+    StaticFileHandler test("www/example/bin", rc, req);
+
+    char buf[1] = {0};
+    std::string response;
+
+    while (!test.is_done() && test.has_output()) {
+        test.read_output(buf, sizeof(buf));
+        response.append(buf, 1);
+    }
+    std::cout << response << std::endl;
+    EXPECT_TRUE(str_contains(response, "HTTP/1.1 301 Moved Permanently"));
+}
