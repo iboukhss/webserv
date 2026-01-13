@@ -123,7 +123,7 @@ Handler* Router::handle_request(const HttpRequest& request) const
     assert(!request.path.empty() && "Request URI can never be empty in the router");
 
     const RouteConfig& best_route = find_best_route(request.path);
-
+    LOG(DEBUG) << "best_route.path = " << best_route.path;
     if (!best_route.shared.redirect.url.empty()) {
         return new RedirectHandler(best_route, request);
     }

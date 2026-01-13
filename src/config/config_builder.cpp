@@ -13,6 +13,61 @@
 #include <cstdlib>
 #include <stdexcept>
 
+static bool file_readable(const std::string& path)
+{
+    struct stat sb;
+    return (stat(path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode));
+}
+
+static bool read_error_page(const std::string& path, std::string& error_page_content)
+{
+    if (!file_readable(path)) {
+        LOG(DEBUG) << "error page not readable : " << path;
+        return false;
+    }
+
+    int fd = 0;
+    char buf[4096];
+    ssize_t bytes = 1;
+    fd = open(path.c_str(), O_RDONLY);
+    if (fd == -1) {
+        return false;
+    }
+
+    while (bytes) {
+        bytes = read(fd, buf, sizeof(buf));
+        if (bytes == 0) {
+            break;
+        }
+        if (bytes < 0) {
+            close(fd);
+            return false;
+        }
+        error_page_content.append(buf, bytes);
+    }
+    close(fd);
+    return true;
+}
+
+static void update_error_pages(SharedConfig& shared)
+{
+    for (std::map<HttpResponse::Status, std::string>::iterator it = shared.error_pages.begin();
+         it != shared.error_pages.end();
+         ++it) {
+        HttpResponse::Status status = it->first;
+        const std::string& url = it->second;
+        std::string path = shared.document_root + url;
+        std::string error_page = "";
+        if (read_error_page(path, error_page)) {
+            LOG(DEBUG) << "ERROR page loaded : " << static_cast<int>(status) << " " << url;
+            it->second = error_page;
+        }
+        else {
+            it->second = "";
+        }
+    }
+}
+
 static void config_error(const std::string& msg, int line = -1)
 {
     if (line == -1)
@@ -254,42 +309,6 @@ static void parse_client_max_body_size(const AstNode& node, SharedConfig& config
     config.max_body_size = size;
 }
 
-static bool file_readable(const std::string& path)
-{
-    struct stat sb;
-    return (stat(path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode));
-}
-
-static bool read_error_page(const std::string& path, std::string& error_page_content)
-{
-    if (!file_readable(path)) {
-        LOG(DEBUG) << "error page not readable : " << path;
-        return false;
-    }
-
-    int fd = 0;
-    char buf[4096];
-    ssize_t bytes = 1;
-    fd = open(path.c_str(), O_RDONLY);
-    if (fd == -1) {
-        return false;
-    }
-
-    while (bytes) {
-        bytes = read(fd, buf, sizeof(buf));
-        if (bytes == 0) {
-            break;
-        }
-        if (bytes < 0) {
-            close(fd);
-            return false;
-        }
-        error_page_content.append(buf, bytes);
-    }
-    close(fd);
-    return true;
-}
-
 static void parse_error_pages(const AstNode& node, SharedConfig& config)
 {
     expect_min_argc(node, 2);
@@ -301,15 +320,7 @@ static void parse_error_pages(const AstNode& node, SharedConfig& config)
 
         if (status == HttpResponse::kStatusNone)
             config_error("'error_page' unsupported status code '" + node.args[i] + "'", node.line);
-
-        std::string error_page;
-        std::string path =
-            config.document_root +
-            url; // potentially unsave ? if file cannot be loaded, default error pages are used
-        if (read_error_page(path, error_page) == true) {
-            LOG(DEBUG) << "ERROR page loaded : " << status << " " << url;
-            config.error_pages[status] = error_page;
-        }
+        config.error_pages[status] = url;
     }
 }
 
@@ -431,6 +442,9 @@ RouteConfig ConfigBuilder::build_route_config(const AstNode& node, const SharedC
     }
 
     SharedConfig shared = build_shared_config(shared_nodes, &parent);
+
+    update_error_pages(shared); // loading the error pages
+
     route.shared = shared;
 
     return route;
