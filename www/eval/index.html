@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>webserv evaluation demo</title>
+    <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+
+    <h1>webserv evaluation demo</h1>
+    <p>This website demonstrates <b>GET</b>, <b>POST</b>, <b>DELETE</b> and <b>CGI</b> features.</p>
+
+    <section>
+        <h2>GET – Static files</h2>
+        <ul>
+            <li><a href="/assets/hello.txt">GET /assets/hello.txt</a></li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>GET – CGI</h2>
+        <ul>
+            <li>
+                <a href="/cgi-bin/env.bla">GET /cgi-bin/env.bla</a>
+                <br><small>Displays CGI environment variables</small>
+            </li>
+            <li>
+                <a href="/cgi-py/upper.py?hello=world">
+                    GET /cgi-py/upper.py?hello=world
+                </a>
+                <br><small>Python CGI (uppercases query string)</small>
+            </li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>POST – Simple body endpoint</h2>
+        <p>POST request to <code>/post_body</code> (server-side handler).</p>
+        <form method="post" action="/post_body" enctype="text/plain">
+            <textarea name="data" rows="5" cols="60">Hello from POST body</textarea><br>
+            <button type="submit">POST to /post_body</button>
+        </form>
+    </section>
+
+    <section>
+        <h2>POST – CGI (binary or shell)</h2>
+        <form method="post" action="/cgi-bin/echo.bla">
+            <input name="msg" value="hello cgi-bin">
+            <button type="submit">POST to /cgi-bin/echo.bla</button>
+        </form>
+    </section>
+
+    <section>
+        <h2>POST – Python CGI</h2>
+        <p>Python CGI script uppercases request body.</p>
+        <form method="post" action="/cgi-py/upper.bla">
+            <input name="text" value="hello evaluator">
+            <button type="submit">POST to Python CGI</button>
+        </form>
+    </section>
+
+    <section>
+        <h2>DELETE</h2>
+        <p>Target file: <code>/delete_me/victim.txt</code></p>
+        <pre>
+curl -i -X DELETE http://localhost:8080/delete_me/victim.txt
+  </pre>
+    </section>
+
+    <section>
+        <h2>Quick curl commands</h2>
+        <pre>
+# GET static
+curl -i http://localhost:8080/assets/hello.txt
+
+# GET Python CGI
+curl -i "http://localhost:8080/cgi-py/upper.bla?abc=def"
+
+# POST body
+curl -i -X POST http://localhost:8080/post_body -d "abc=123"
+
+# POST Python CGI
+curl -i -X POST http://localhost:8080/cgi-py/upper.bla -d "hello world"
+
+# DELETE
+curl -i -X DELETE http://localhost:8080/delete_me/victim.txt
+  </pre>
+    </section>
+
+</body>
+
+</html>

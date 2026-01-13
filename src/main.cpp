@@ -10,9 +10,10 @@ int main(void)
     setup_signal_handlers();
 
     try {
+        // HttpConfig cfg = load_http_config("config/youpi_banane.conf");
         // HttpConfig cfg = load_http_config("config/vitepress.conf");
-        HttpConfig cfg = load_http_config("config/site1.conf");
-
+        // HttpConfig cfg = load_http_config("config/python.conf");
+        HttpConfig cfg = load_http_config("config/eval.conf");
         Server server(cfg.servers[0]);
         server.init();
         server.run();

@@ -1,0 +1,11 @@
+#!/bin/sh
+# Saves request body to a timestamped file in /www/upload/
+# Requires that your server exposes /www as root (so /www/upload exists on disk).
+
+OUT="/www/upload/$(date +%s).txt"
+
+echo "Content-Type: text/plain"
+echo
+echo "Saving body to: $OUT"
+cat > "$OUT"
+echo "Done."
