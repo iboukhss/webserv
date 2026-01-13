@@ -322,6 +322,9 @@ size_t CgiHandler::read_output(char* buf, size_t n)
         eof_reached_ = true;
     }
     else if (bytes_read < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) { // pipe not available for read
+            return 0;
+        }
         if (errno != EAGAIN && errno != EWOULDBLOCK) {
             if (!headers_parsed_) {
                 set_res_and_quit(HttpResponse::kStatusBadGateway);

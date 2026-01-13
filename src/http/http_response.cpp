@@ -103,7 +103,7 @@ std::string HttpResponse::to_string() const
     if (!inline_body.empty()) {
         out << "Content-Length: " << inline_body.size() << "\r\n";
     }
-    else if (content_length > 0) {
+    else {
         out << "Content-Length: " << content_length << "\r\n";
     }
     if (is_chunked) {
@@ -165,7 +165,7 @@ HttpResponse HttpResponse::make_response_with_body(HttpResponse::Status status,
     res.code = status;
     res.content_type = content_type;
     res.keep_alive = req.keep_alive;
-    if (status == 204 || status == 304) {
+    if (status == kStatusNoContent || status == 304) {
         res.inline_body = "";
         res.content_length = 0;
     }
