@@ -11,6 +11,7 @@ RedirectHandler::RedirectHandler(const RouteConfig& rc, const HttpRequest& req)
       req_(req),
       out_off_(0)
 {
+    LOG(DEBUG) << "REDIRECTION HANDLER";
     res_ = HttpResponse::make_response_headers_only(rc_.shared.redirect.code, "", 0, req_);
     res_.location = rc_.shared.redirect.url;
     out_buf_ = res_.to_string();

@@ -9,6 +9,13 @@
 
 #include <string>
 
+enum ResolveKind { kFile, kDirNoIndex, kNotFound };
+
+struct ResolveResult {
+    ResolveKind kind;
+    std::string path;
+};
+
 class StaticFileHandler : public Handler {
 public:
     StaticFileHandler(const std::string& path, const RouteConfig& rc, const HttpRequest& req);
@@ -29,7 +36,9 @@ public:
 private:
     StaticFileHandler(const StaticFileHandler&);
     StaticFileHandler& operator=(const StaticFileHandler&);
+    void resolve_path(ResolveResult& resolve) const;
     void set_error(const HttpResponse::Status code);
+    void set_redirect(const HttpResponse::Status code, const std::string& redirect_path);
 
     // constructor args
     const std::string& path_;

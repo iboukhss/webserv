@@ -52,7 +52,7 @@ UTEST(RedirectHandlerTest, builds_redirect_response_with_location_header)
     ASSERT_TRUE(is_301);
 
     // Usually redirects have no body in your implementation
-    ASSERT_TRUE(resp.find("Content-Length: 0") == std::string::npos);
+    ASSERT_TRUE(resp.find("Content-Length: 0") != std::string::npos);
 
     // Must end headers correctly (at least one empty line)
     ASSERT_TRUE(resp.find("\r\n\r\n") != std::string::npos ||

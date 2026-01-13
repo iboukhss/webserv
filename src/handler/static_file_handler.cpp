@@ -5,41 +5,105 @@
 #include "util/log_message.hpp"
 #include "util/syscall_error.hpp"
 
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <cstring>
 #include <stdexcept>
 #include <vector>
 
-static std::string resolve_path(const std::string& path,
-                                const std::vector<std::string>& index_files)
+static std::vector<std::string> list_dir(const std::string& dir_path)
 {
-    struct stat sb;
-    std::string full_path;
-    std::string not_found = "";
+    std::vector<std::string> names;
 
-    // Happy case: exact match found
-    if (stat(path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode))
-        return path;
+    DIR* d = opendir(dir_path.c_str());
+    if (!d)
+        return names;
 
-    // Directory: check every index files
-    if (stat(path.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
-        for (size_t i = 0; i < index_files.size(); i++) {
-            full_path = path + "/" + index_files[i];
-            if (stat(full_path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode))
-                return full_path;
-        }
-        return not_found;
+    for (dirent* ent = readdir(d); ent != NULL; ent = readdir(d)) {
+        std::string name = ent->d_name;
+
+        if (name == "." || name == "..")
+            continue;
+
+        names.push_back(name);
+    }
+    closedir(d);
+
+    std::sort(names.begin(), names.end());
+    return names;
+}
+
+static std::string html_escape(const std::string& s)
+{
+    std::string out;
+    out.reserve(s.size());
+    for (size_t i = 0; i < s.size(); ++i) {
+        char c = s[i];
+        if (c == '&')
+            out += "&amp;";
+        else if (c == '<')
+            out += "&lt;";
+        else if (c == '>')
+            out += "&gt;";
+        else if (c == '"')
+            out += "&quot;";
+        else
+            out += c;
+    }
+    return out;
+}
+
+static std::string url_escape_min(const std::string& s)
+{
+    std::string out;
+    for (size_t i = 0; i < s.size(); ++i) {
+        if (s[i] == ' ')
+            out += "%20";
+        else
+            out += s[i];
+    }
+    return out;
+}
+
+static std::string build_autoindex_html(const std::string& fs_dir, const std::string& url_dir)
+{
+    std::vector<std::string> names = list_dir(fs_dir);
+
+    std::string body;
+    body += "<!doctype html><html><head><meta charset=\"utf-8\">";
+    body += "<title>Index of " + html_escape(url_dir) + "</title></head><body>";
+    body += "<h1>Index of " + html_escape(url_dir) + "</h1>";
+    body += "<ul>";
+
+    // Parent link (optional)
+    if (url_dir != "/") {
+        body += "<li><a href=\"../\">../</a></li>";
     }
 
-    // Clean URL fallback: check /foo -> /foo.html
-    full_path = path + ".html";
-    if (stat(full_path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode))
-        return full_path;
+    for (size_t i = 0; i < names.size(); ++i) {
+        const std::string& name = names[i];
 
-    return not_found;
+        std::string fs_entry = fs_dir;
+        if (!fs_entry.empty() && fs_entry[fs_entry.size() - 1] != '/')
+            fs_entry += "/";
+        fs_entry += name;
+
+        struct stat sb;
+        bool is_dir = (stat(fs_entry.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode));
+
+        std::string display = html_escape(name) + (is_dir ? "/" : "");
+        std::string href = url_escape_min(name) + (is_dir ? "/" : "");
+
+        body += "<li><a href=\"" + href + "\">" + display + "</a></li>";
+    }
+
+    body += "</ul></body></html>";
+    return body;
 }
 
 static const char* derive_file_type(const std::string& file_path)
@@ -72,6 +136,45 @@ static const char* derive_file_type(const std::string& file_path)
     return "application/octet-stream";
 }
 
+void StaticFileHandler::resolve_path(ResolveResult& resolve) const
+{
+    struct stat sb;
+    std::string full_path;
+    const std::vector<std::string>& index_files = rc_.shared.index_files;
+    // Happy case: exact match found
+    if (stat(path_.c_str(), &sb) == 0 && S_ISREG(sb.st_mode)) {
+        resolve.path = path_;
+        resolve.kind = kFile;
+        return;
+    }
+    // Directory: check every index files
+    if (stat(path_.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
+        for (size_t i = 0; i < index_files.size(); i++) {
+            full_path = path_ + "/" + index_files[i];
+            if (stat(full_path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode)) {
+                resolve.path = full_path;
+                resolve.kind = kFile;
+                return;
+            }
+        }
+        resolve.path = path_;
+        resolve.kind = kDirNoIndex;
+        return;
+    }
+
+    // Clean URL fallback: check /foo -> /foo.html
+    full_path = path_ + ".html";
+    if (stat(full_path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode)) {
+        resolve.path = full_path;
+        resolve.kind = kFile;
+        return;
+    }
+
+    resolve.path = "";
+    resolve.kind = kNotFound;
+    return;
+}
+
 StaticFileHandler::StaticFileHandler(const std::string& path,
                                      const RouteConfig& rc,
                                      const HttpRequest& req)
@@ -83,24 +186,40 @@ StaticFileHandler::StaticFileHandler(const std::string& path,
       fd_(-1)
 
 {
-
-    if (rc.shared.index_files.empty())
-        LOG(WARN) << "Index files are empty";
-    std::string full_path = resolve_path(path, rc.shared.index_files);
-    if (full_path.empty()) {
-        LOG(ERROR) << "Couldn't open file " << path;
+    LOG(DEBUG) << "req_.path = " << req_.path;
+    struct ResolveResult r;
+    resolve_path(r);
+    if (r.kind == kNotFound) {
         set_error(HttpResponse::kStatusNotFound);
         return;
     }
+    if (r.kind == kDirNoIndex && !rc_.shared.autoindex_enabled) {
+        set_error(HttpResponse::kStatusForbidden);
+        return;
+    }
+    if (r.kind == kDirNoIndex && rc_.shared.autoindex_enabled && r.path[r.path.size() - 1] != '/') {
+        set_redirect(HttpResponse::kStatusMovedPermanently, req_.path + "/");
+        return;
+    }
+    if (r.kind == kDirNoIndex && rc_.shared.autoindex_enabled) {
+        std::string html = build_autoindex_html(r.path, req_.path);
+        res_ = HttpResponse::make_response_with_body(
+            HttpResponse::kStatusOk, "text/html; charset=UTF-8", html, req_);
+
+        out_buf_ = res_.to_string();
+        fd_ = -1;
+        return;
+    }
+
     struct stat file_stat;
-    fd_ = open(full_path.data(), O_RDONLY);
+    fd_ = open(r.path.data(), O_RDONLY);
     if (fd_ == -1) {
         set_error(HttpResponse::kStatusInternalServerError);
         return;
     }
-    stat(full_path.data(), &file_stat);
+    stat(r.path.data(), &file_stat);
     file_size_ = file_stat.st_size;
-    std::string file_type = derive_file_type(full_path);
+    std::string file_type = derive_file_type(r.path);
     res_ = HttpResponse::make_response_headers_only(
         HttpResponse::kStatusOk, file_type, file_size_, req_);
     out_buf_ = res_.to_string();
@@ -152,4 +271,18 @@ void StaticFileHandler::set_error(const HttpResponse::Status code)
 {
     res_ = HttpResponse::make_error(code, rc_.shared.error_pages, req_);
     out_buf_ = res_.to_string();
+    if (fd_ != -1) {
+        close(fd_);
+        fd_ = -1;
+    }
+}
+
+void StaticFileHandler::set_redirect(const HttpResponse::Status code,
+                                     const std::string& redirect_path)
+{
+    res_ = HttpResponse::make_response_headers_only(code, "", 0, req_);
+    // LOG(DEBUG) << "redirect location = " << redirect_path;
+    res_.location = redirect_path;
+    out_buf_ = res_.to_string();
+    fd_ = -1;
 }
