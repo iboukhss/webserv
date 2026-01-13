@@ -68,13 +68,15 @@ const RouteConfig& Router::find_best_route(const std::string& request_path) cons
 // This seems to be valid in some cases but we ignore it right now.
 static bool is_cgi_request(const HttpRequest& request, const RouteConfig& route)
 {
+    LOG(DEBUG) << "shared.ext" << route.shared.cgi.extension;
     if (route.shared.cgi.extension.empty())
         return false;
 
     size_t dot = request.path.find_last_of(".");
     if (dot == std::string::npos)
         return false;
-
+    std::string ext = request.path.substr(dot); 
+    LOG(DEBUG) << "ext = " << ext;
     return request.path.substr(dot) == route.shared.cgi.extension;
 }
 
