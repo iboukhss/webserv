@@ -183,10 +183,10 @@ StaticFileHandler::StaticFileHandler(const std::string& path,
       req_(req),
       out_off_(0),
       file_size_(0),
-      fd_(-1)
+      fd_(-1),
+      done_(false)
 
 {
-    LOG(DEBUG) << "req_.path = " << req_.path;
     struct ResolveResult r;
     resolve_path(r);
     if (r.kind == kNotFound) {
@@ -207,7 +207,7 @@ StaticFileHandler::StaticFileHandler(const std::string& path,
             HttpResponse::kStatusOk, "text/html; charset=UTF-8", html, req_);
 
         out_buf_ = res_.to_string();
-        fd_ = -1;
+        done_ = true;
         return;
     }
 
@@ -245,11 +245,16 @@ size_t StaticFileHandler::read_output(char* buf, size_t n)
         }
     }
     if (fd_ == -1) // safeguard
+    {
+        done_ = true;
         return copied;
+    }
+
     ssize_t bytes = read(fd_, buf + copied, n - copied);
     if (bytes == 0) {
         close(fd_);
         fd_ = -1;
+        done_ = true;
         return copied;
     }
     if (bytes < 0) {
@@ -271,18 +276,14 @@ void StaticFileHandler::set_error(const HttpResponse::Status code)
 {
     res_ = HttpResponse::make_error(code, rc_.shared.error_pages, req_);
     out_buf_ = res_.to_string();
-    if (fd_ != -1) {
-        close(fd_);
-        fd_ = -1;
-    }
+    done_ = true;
 }
 
 void StaticFileHandler::set_redirect(const HttpResponse::Status code,
                                      const std::string& redirect_path)
 {
     res_ = HttpResponse::make_response_headers_only(code, "", 0, req_);
-    // LOG(DEBUG) << "redirect location = " << redirect_path;
     res_.location = redirect_path;
     out_buf_ = res_.to_string();
-    fd_ = -1;
+    done_ = true;
 }

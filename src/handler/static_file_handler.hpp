@@ -28,7 +28,7 @@ public:
     virtual bool is_regular_file() const { return true; }
     virtual bool has_output() const { return out_off_ < out_buf_.size() || fd_ != -1; }
     virtual bool needs_input() const { return false; };
-    virtual bool is_done() const { return out_off_ >= out_buf_.size() && fd_ == -1; }
+    virtual bool is_done() const { return done_ && out_off_ >= out_buf_.size() && fd_ == -1; }
 
     virtual int cgi_read_fd() const { return -1; };
     virtual int cgi_write_fd() const { return -1; };
@@ -52,6 +52,7 @@ private:
     // other handler specifc variables
     off_t file_size_;
     int fd_;
+    bool done_;
 };
 
 #endif
