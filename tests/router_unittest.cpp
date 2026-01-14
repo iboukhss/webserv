@@ -71,6 +71,26 @@ UTEST(RouterTest, MatchesDirectoryWithTrailingSlash)
     ASSERT_STREQ("/files", result.c_str());
 }
 
+UTEST(RouterTest, MatchesSubdirectory)
+{
+    HttpConfig conf = make_unittest_config();
+    Router router(conf.servers[0].locations);
+    std::string request_path = "/cgi-bin/upload.php";
+    std::string result = router.find_best_route(request_path).path;
+
+    ASSERT_STREQ("/cgi-bin/", result.c_str());
+}
+
+UTEST(RouterTest, DoesNotMatchEndpointWithoutBoundary)
+{
+    HttpConfig conf = make_unittest_config();
+    Router router(conf.servers[0].locations);
+    std::string request_path = "/uploading/file.txt";
+    std::string result = router.find_best_route(request_path).path;
+
+    ASSERT_STREQ("/", result.c_str());
+}
+
 UTEST(RouterTest, MatchesDirectoryWithMutlipleLeadingSlashes)
 {
     UTEST_SKIP("TODO: IMPLEMENT THIS FEATURE");

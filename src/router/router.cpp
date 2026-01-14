@@ -21,25 +21,34 @@ Router::Router(const std::map<std::string, RouteConfig>& routes)
 {
 }
 
-// Returns the length of the matching prefix between request_path and route_path
-static size_t prefix_length(const std::string& request_path, const std::string& route_path)
+static bool route_matches(const std::string& request_path, const std::string& route)
 {
-    if (route_path == "/")
-        return 1;
+    if (route == "/")
+        return true;
 
-    if (request_path.size() < route_path.size())
-        return 0;
+    if (request_path.size() < route.size())
+        return false;
 
-    if (request_path.compare(0, route_path.size(), route_path) != 0)
-        return 0;
+    // Check if prefix matches
+    if (request_path.compare(0, route.size(), route) != 0)
+        return false;
 
-    if (request_path.size() == route_path.size())
-        return route_path.size();
+    // Check for exact match
+    if (request_path.size() == route.size())
+        return true;
 
-    if (request_path[route_path.size()] == '/')
-        return route_path.size();
+    assert(route[0] == '/');
+    assert(route.size() > 1 && "At this point we must have matched more than just '/'");
 
-    return 0;
+    // Directory match
+    if (route[route.size() - 1] == '/')
+        return true;
+
+    // Endpoint match, ensure boundary
+    if (request_path[route.size()] == '/')
+        return true;
+
+    return false;
 }
 
 // for the moment it takes some static input
@@ -54,7 +63,9 @@ const RouteConfig& Router::find_best_route(const std::string& request_path) cons
     for (std::map<std::string, RouteConfig>::const_iterator it = routes_.begin();
          it != routes_.end();
          ++it) {
-        size_t match_len = prefix_length(request_path, it->first);
+
+        std::string route_path = it->second.path;
+        size_t match_len = route_matches(request_path, route_path) ? route_path.size() : 0;
         if (match_len > best_len) {
             best_len = match_len;
             best = &it->second;
@@ -68,15 +79,13 @@ const RouteConfig& Router::find_best_route(const std::string& request_path) cons
 // This seems to be valid in some cases but we ignore it right now.
 static bool is_cgi_request(const HttpRequest& request, const RouteConfig& route)
 {
-    LOG(DEBUG) << "shared.ext" << route.shared.cgi.extension;
     if (route.shared.cgi.extension.empty())
         return false;
 
     size_t dot = request.path.find_last_of(".");
     if (dot == std::string::npos)
         return false;
-    std::string ext = request.path.substr(dot); 
-    LOG(DEBUG) << "ext = " << ext;
+    std::string ext = request.path.substr(dot);
     return request.path.substr(dot) == route.shared.cgi.extension;
 }
 
