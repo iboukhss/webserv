@@ -3,111 +3,407 @@
 
 <head>
     <meta charset="utf-8" />
+    <title>webserv evaluation demo</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>webserv — File Box</title>
     <link rel="stylesheet" href="/style.css" />
 </head>
 
 <body>
-    <main class="wrap">
-        <header class="top">
-            <div>
-                <h1>File Box</h1>
-                <p class="sub">
-                    Upload and delete files in one folder: <code>/upload/</code>
-                </p>
+    <header class="hero">
+        <h1>webserv evaluation demo</h1>
+        <p class="sub">
+            Demonstrates <b>GET</b>, <b>POST</b>, <b>DELETE</b> and <b>CGI</b> using a small test site.
+        </p>
+    </header>
+
+    <main>
+
+        <section class="card">
+            <h2>GET – Static file</h2>
+
+            <div class="row">
+                <a class="btn" href="/assets/cold_fusion.txt" target="_blank" rel="noopener">
+                    Open cold_fusion.txt (tab)
+                </a>
+                <a class="btn" href="/assets/cold_fusion.txt" download>
+                    Download cold_fusion.txt
+                </a>
             </div>
-            <div class="pill">webserv eval</div>
-        </header>
 
-        <section class="card">
-            <h2>Quick GET sanity check</h2>
-            <p class="muted">Static file (should always work):</p>
-            <p><a class="link" href="/assets/hello.txt">GET /assets/hello.txt</a></p>
+            <p class="hint">Equivalent curl:</p>
+            <pre>curl -i http://localhost:8080/assets/cold_fusion.txt</pre>
         </section>
 
         <section class="card">
-            <h2>Upload to <code>/upload/</code></h2>
-            <p class="muted">
-                Select a file and upload it. The server should store it under
-                <code>www/eval/upload/&lt;filename&gt;</code>.
-            </p>
+            <h2>POST – Upload (repeatable)</h2>
 
-            <form class="row" method="post" action="/upload/" enctype="multipart/form-data">
-                <input class="file" type="file" name="file" required />
-                <button class="btn" type="submit">Upload</button>
-            </form>
-
-            <details class="details">
-                <summary>Equivalent curl</summary>
-                <pre class="code">curl -i -X POST http://localhost:8080/upload/ \
-  -F "file=@./myfile.txt"</pre>
-            </details>
-        </section>
-
-        <section class="card">
-            <h2>Delete from <code>/upload/</code></h2>
-            <p class="muted">
-                Enter the exact filename to delete. No listing — you remember the name.
+            <p class="hint">
+                Sends a raw body to <code>/upload/&lt;filename&gt;</code> (matches your working curl).
             </p>
 
             <div class="row">
-                <input class="text" id="delname" type="text" placeholder="example.txt" autocomplete="off" />
-                <button class="btn danger" id="delbtn" type="button">Delete</button>
+                <label for="uploadName" class="label">Filename</label>
+                <input id="uploadName" type="text" value="hello.txt" />
+                <button class="btn btn-primary" id="uploadBtn" type="button">Upload</button>
             </div>
 
-            <p class="muted small">
-                Sends: <code>DELETE /upload/&lt;name&gt;</code>
-            </p>
+            <label for="uploadBody" class="label">Body</label>
+            <textarea id="uploadBody" rows="6">some content xy</textarea>
 
-            <details class="details">
-                <summary>Equivalent curl</summary>
-                <pre class="code">curl -i -X DELETE "http://localhost:8080/upload/example.txt"</pre>
-            </details>
+            <p class="hint">Equivalent curl:</p>
+            <pre>
+curl -X POST http://localhost:8080/upload/hello.txt \
+  -H "Content-Type: text/plain" \
+  --data "some content xy"
+      </pre>
+
+            <p class="hint">Server response:</p>
+            <pre id="uploadResult" class="out"></pre>
         </section>
 
         <section class="card">
-            <h2>Extra (optional) curl tests</h2>
-            <pre class="code"># GET uploaded file by name (optional if you serve /upload/)
-curl -i http://localhost:8080/upload/example.txt
+            <h2>DELETE – Remove an uploaded file</h2>
 
-# Upload
-curl -i -X POST http://localhost:8080/upload/ -F "file=@./example.txt"
+            <p class="hint">
+                Deletes <code>/upload/&lt;filename&gt;</code>. Use it after uploading a file above.
+            </p>
 
-# Delete (same folder)
-curl -i -X DELETE http://localhost:8080/upload/example.txt
+            <div class="row">
+                <label for="deleteName" class="label">Filename</label>
+                <input id="deleteName" type="text" value="hello.txt" />
+                <button class="btn btn-primary" id="deleteBtn" type="button">Delete</button>
+                <a class="btn" href="/cgi-py/upload_ui.bla" target="_blank" rel="noopener">
+                    (Optional) Open Upload+Delete UI
+                </a>
+            </div>
 
-# Keep your old DELETE test file if you want
-curl -i -X DELETE http://localhost:8080/delete_me/victim.txt</pre>
+            <p class="hint">Equivalent curl:</p>
+            <pre>curl -i -X DELETE http://localhost:8080/upload/hello.txt</pre>
+
+            <p class="hint">Server response:</p>
+            <pre id="deleteResult" class="out"></pre>
         </section>
 
-        <footer class="foot">
-            <span class="muted">CGI intentionally omitted for now.</span>
-        </footer>
+        <section class="card">
+            <h2>POST – Body endpoint (redirection test)</h2>
+
+            <p class="hint">
+                In the config, <code>/post_body</code> responds with <b>302 redirect</b> to <code>/upload</code>.
+                This section is here to demonstrate that your server returns the correct status and
+                <code>Location</code> header.
+            </p>
+
+            <p class="hint">
+                What should happen:
+                <br />• POST to <code>/post_body</code> → <code>302</code> + <code>Location: /upload</code>
+                <br />• If the client follows the redirect, it will request <code>/upload</code> (typically via GET)
+            </p>
+
+            <div class="row">
+                <button class="btn btn-primary" id="postBodyRedirectBtn" type="button">
+                    POST to /post_body (show 302 headers)
+                </button>
+                <button class="btn" id="postBodyRedirectFollowBtn" type="button">
+                    POST to /post_body (follow redirect)
+                </button>
+            </div>
+
+            <label for="postBodyRedirectPayload" class="label">Body</label>
+            <textarea id="postBodyRedirectPayload" rows="4">test redirect payload</textarea>
+
+            <p class="hint">Equivalent curl (show redirect response):</p>
+            <pre>curl -i -X POST http://localhost:8080/post_body -d "test redirect"</pre>
+
+            <p class="hint">Equivalent curl (follow redirect):</p>
+            <pre>curl -i -L -X POST http://localhost:8080/post_body -d "test redirect"</pre>
+
+            <p class="hint">Server response:</p>
+            <pre id="postBodyRedirectResult" class="out"></pre>
+        </section>
+
+        <!-- ===================== CGI moved to bottom ===================== -->
+
+        <section class="card">
+            <h2>POST – CGI (bash /bin/sh)</h2>
+
+            <p class="hint">
+                Sends a raw POST body to a CGI script in <code>/cgi-bin/</code>.
+                Your <code>echo.bla</code> should typically print the body.
+            </p>
+
+            <div class="row">
+                <label for="cgiShPath" class="label">Path</label>
+                <input id="cgiShPath" type="text" value="/cgi-bin/echo.bla" />
+            </div>
+
+            <label for="cgiShBody" class="label">Body</label>
+            <textarea id="cgiShBody" rows="5">hello from bash CGI</textarea>
+
+            <div class="row">
+                <button class="btn btn-primary" id="cgiShPostBtn" type="button">POST to bash CGI</button>
+                <a class="btn" id="cgiShOpenBtn" href="/cgi-bin/echo.bla" target="_blank" rel="noopener">Open (GET)</a>
+            </div>
+
+            <p class="hint">Equivalent curl:</p>
+            <pre>curl -i -X POST http://localhost:8080/cgi-bin/echo.bla -d "hello from bash CGI"</pre>
+
+            <p class="hint">Server response:</p>
+            <pre id="cgiShResult" class="out"></pre>
+        </section>
+
+        <section class="card">
+            <h2>POST – CGI (Python)</h2>
+
+            <p class="hint">
+                Sends a raw POST body to <code>/cgi-py/upper.bla</code>, which uppercases the input.
+                (If your file is <code>upper.py</code>, change the path below accordingly.)
+            </p>
+
+            <div class="row">
+                <label for="cgiPyPath" class="label">Path</label>
+                <input id="cgiPyPath" type="text" value="/cgi-py/upper.bla" />
+            </div>
+
+            <label for="cgiPyBody" class="label">Body</label>
+            <textarea id="cgiPyBody" rows="5">hello from python cgi</textarea>
+
+            <div class="row">
+                <button class="btn btn-primary" id="cgiPyPostBtn" type="button">POST to Python CGI</button>
+                <a class="btn" id="cgiPyGetBtn" href="/cgi-py/upper.bla?hello=world" target="_blank" rel="noopener">
+                    Open (GET with query)
+                </a>
+            </div>
+
+            <p class="hint">Equivalent curl:</p>
+            <pre>curl -i -X POST http://localhost:8080/cgi-py/upper.bla -d "hello from python cgi"</pre>
+
+            <p class="hint">Server response:</p>
+            <pre id="cgiPyResult" class="out"></pre>
+        </section>
+
+        <section class="card">
+            <h2>GET – CGI (optional quick checks)</h2>
+
+            <div class="row">
+                <a class="btn" href="/cgi-bin/env.bla" target="_blank" rel="noopener">Open env CGI (tab)</a>
+                <a class="btn" href="/cgi-bin/env.bla" download>Download env CGI output</a>
+            </div>
+            <p class="hint">Equivalent curl:</p>
+            <pre>curl -i http://localhost:8080/cgi-bin/env.bla</pre>
+
+            <hr />
+
+            <div class="row">
+                <a class="btn" href="/cgi-py/upper.bla?hello=world" target="_blank" rel="noopener">Open Python upper CGI
+                    (tab)</a>
+                <a class="btn" href="/cgi-py/upper.bla?hello=world" download>Download Python upper CGI output</a>
+            </div>
+            <p class="hint">Equivalent curl:</p>
+            <pre>curl -i "http://localhost:8080/cgi-py/upper.bla?hello=world"</pre>
+        </section>
+
     </main>
 
-    <script>
-        const input = document.getElementById("delname");
-        const btn = document.getElementById("delbtn");
+    <footer class="footer">
+        <span>Tip: the “Equivalent curl” commands are what you can type live during evaluation.</span>
+    </footer>
 
-        btn.addEventListener("click", async () => {
-            const name = (input.value || "").trim();
+    <script>
+        function sanitizeFilename(name) {
+            name = (name || "").trim();
+            if (!name || name.includes("/") || name.includes("\\") || name.includes("..")) return "";
+            return name;
+        }
+
+        function sanitizePath(p) {
+            p = (p || "").trim();
+            if (!p.startsWith("/")) return "";
+            if (p.includes("..")) return "";
+            return p;
+        }
+
+        async function doFetchText(url, options) {
+            const r = await fetch(url, options);
+            const text = await r.text();
+            const headers = [];
+            r.headers.forEach((v, k) => headers.push(k + ": " + v));
+            return {
+                status: r.status,
+                statusText: r.statusText,
+                headers: headers.join("\n"),
+                body: text
+            };
+        }
+
+        // Upload: POST /upload/<filename>
+        document.getElementById("uploadBtn").addEventListener("click", async () => {
+            const name = sanitizeFilename(document.getElementById("uploadName").value);
+            const body = document.getElementById("uploadBody").value;
+            const out = document.getElementById("uploadResult");
+            out.textContent = "";
+
             if (!name) {
-                alert("Enter a filename to delete (e.g. example.txt).");
+                out.textContent = "Invalid filename (no /, \\\\, or ..).";
                 return;
             }
 
             const url = "/upload/" + encodeURIComponent(name);
 
             try {
-                const res = await fetch(url, { method: "DELETE" });
-                const text = await res.text();
-                alert(`DELETE ${url}\nStatus: ${res.status}\n\n${text.slice(0, 400)}`);
+                const res = await doFetchText(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain" },
+                    body: body
+                });
+
+                out.textContent =
+                    "POST " + url + "\n" +
+                    "Status: " + res.status + " " + res.statusText + "\n\n" +
+                    res.body;
             } catch (e) {
-                alert("Request failed: " + e);
+                out.textContent = "Upload failed: " + e;
             }
         });
+
+        // Delete: DELETE /upload/<filename>
+        document.getElementById("deleteBtn").addEventListener("click", async () => {
+            const name = sanitizeFilename(document.getElementById("deleteName").value);
+            const out = document.getElementById("deleteResult");
+            out.textContent = "";
+
+            if (!name) {
+                out.textContent = "Invalid filename (no /, \\\\, or ..).";
+                return;
+            }
+
+            const url = "/upload/" + encodeURIComponent(name);
+
+            try {
+                const res = await doFetchText(url, { method: "DELETE" });
+                out.textContent =
+                    "DELETE " + url + "\n" +
+                    "Status: " + res.status + " " + res.statusText + "\n\n" +
+                    res.body;
+            } catch (e) {
+                out.textContent = "Delete failed: " + e;
+            }
+        });
+
+        // POST /post_body (show 302 without following)
+        document.getElementById("postBodyRedirectBtn").addEventListener("click", async () => {
+            const body = document.getElementById("postBodyRedirectPayload").value;
+            const out = document.getElementById("postBodyRedirectResult");
+            out.textContent = "";
+
+            try {
+                const r = await fetch("/post_body", {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain" },
+                    body: body,
+                    redirect: "manual" // don't follow, show 302
+                });
+
+                const headers = [];
+                r.headers.forEach((v, k) => headers.push(k + ": " + v));
+
+                out.textContent =
+                    "POST /post_body\n" +
+                    "Status: " + r.status + " " + r.statusText + "\n" +
+                    headers.join("\n") + "\n\n" +
+                    "(Body may be empty for redirects)";
+            } catch (e) {
+                out.textContent = "Redirect test failed: " + e;
+            }
+        });
+
+        // POST /post_body (follow redirect)
+        document.getElementById("postBodyRedirectFollowBtn").addEventListener("click", async () => {
+            const body = document.getElementById("postBodyRedirectPayload").value;
+            const out = document.getElementById("postBodyRedirectResult");
+            out.textContent = "";
+
+            try {
+                const res = await doFetchText("/post_body", {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain" },
+                    body: body,
+                    redirect: "follow"
+                });
+
+                out.textContent =
+                    "POST /post_body (follow)\n" +
+                    "Final Status: " + res.status + " " + res.statusText + "\n\n" +
+                    res.body;
+            } catch (e) {
+                out.textContent = "Redirect follow failed: " + e;
+            }
+        });
+
+        // POST to bash CGI
+        document.getElementById("cgiShPostBtn").addEventListener("click", async () => {
+            const path = sanitizePath(document.getElementById("cgiShPath").value);
+            const body = document.getElementById("cgiShBody").value;
+            const out = document.getElementById("cgiShResult");
+            out.textContent = "";
+
+            if (!path) {
+                out.textContent = "Invalid path (must start with / and not contain ..).";
+                return;
+            }
+
+            document.getElementById("cgiShOpenBtn").setAttribute("href", path);
+
+            try {
+                const res = await doFetchText(path, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain" },
+                    body: body
+                });
+
+                out.textContent =
+                    "POST " + path + "\n" +
+                    "Status: " + res.status + " " + res.statusText + "\n\n" +
+                    res.body;
+            } catch (e) {
+                out.textContent = "CGI POST failed: " + e;
+            }
+        });
+
+        // POST to python CGI
+        document.getElementById("cgiPyPostBtn").addEventListener("click", async () => {
+            const path = sanitizePath(document.getElementById("cgiPyPath").value);
+            const body = document.getElementById("cgiPyBody").value;
+            const out = document.getElementById("cgiPyResult");
+            out.textContent = "";
+
+            if (!path) {
+                out.textContent = "Invalid path (must start with / and not contain ..).";
+                return;
+            }
+
+            try {
+                const res = await doFetchText(path, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain" },
+                    body: body
+                });
+
+                out.textContent =
+                    "POST " + path + "\n" +
+                    "Status: " + res.status + " " + res.statusText + "\n\n" +
+                    res.body;
+            } catch (e) {
+                out.textContent = "CGI POST failed: " + e;
+            }
+        });
+
+        // Keep python GET button synced with path
+        document.getElementById("cgiPyPath").addEventListener("input", () => {
+            const path = sanitizePath(document.getElementById("cgiPyPath").value) || "/cgi-py/upper.bla";
+            document.getElementById("cgiPyGetBtn").setAttribute("href", path + "?hello=world");
+        });
     </script>
+
 </body>
 
 </html>

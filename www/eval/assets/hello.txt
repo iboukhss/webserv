@@ -1,2 +1,0 @@
-Hello evaluator 👋
-This is a static GET file served by webserv.
