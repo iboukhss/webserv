@@ -14,7 +14,7 @@ int main(void)
         // HttpConfig cfg = load_http_config("config/vitepress.conf");
         // HttpConfig cfg = load_http_config("config/python.conf");
         HttpConfig cfg = load_http_config("config/eval.conf");
-        Server server(cfg.servers[0]);
+        Server server(cfg);
         server.init();
         server.run();
     }

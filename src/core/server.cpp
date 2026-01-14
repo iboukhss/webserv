@@ -21,7 +21,7 @@
 #include <cstring>
 #include <stdexcept>
 
-Server::Server(const ServerConfig& config)
+Server::Server(const HttpConfig& config)
     : config_(config),
       epoll_fd_(-1)
 {
@@ -50,33 +50,37 @@ void Server::init()
     if (epoll_fd_ == -1)
         throw std::runtime_error("epoll_create1 failed");
 
-    VirtualServer* vs = new VirtualServer(config_);
-    vservers_.push_back(vs);
+    for (size_t i = 0; i < config_.servers.size(); i++) {
+        const ServerConfig& sconf = config_.servers[i];
 
-    for (size_t i = 0; i < config_.listen_addrs.size(); i++) {
-        int fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
-        if (fd == -1)
-            throw std::runtime_error("socket failed");
+        VirtualServer* vs = new VirtualServer(sconf);
+        vservers_.push_back(vs);
 
-        int yes = 1;
-        setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+        for (size_t j = 0; j < sconf.listen_addrs.size(); j++) {
+            int fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+            if (fd == -1)
+                throw std::runtime_error("socket failed");
 
-        const sockaddr_in& addr = config_.listen_addrs[i];
+            int yes = 1;
+            setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 
-        if (bind(fd, (sockaddr*) &addr, sizeof(addr)) == -1)
-            throw std::runtime_error("bind failed");
+            const sockaddr_in& addr = sconf.listen_addrs[j];
 
-        if (listen(fd, WEBSERV_DEFAULT_MAX_PENDING_CONNECTIONS) == -1)
-            throw std::runtime_error("listen failed");
+            if (bind(fd, (sockaddr*) &addr, sizeof(addr)) == -1)
+                throw std::runtime_error("bind failed");
 
-        listen_fds_.push_back(fd);
-        server_map_[fd] = vservers_[0];
+            if (listen(fd, WEBSERV_DEFAULT_MAX_PENDING_CONNECTIONS) == -1)
+                throw std::runtime_error("listen failed");
 
-        epoll_event ev;
-        ev.events = EPOLLIN;
-        ev.data.fd = fd;
-        if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev) == -1)
-            throw std::runtime_error("epoll_ctl failed");
+            listen_fds_.push_back(fd);
+            server_map_[fd] = vs;
+
+            epoll_event ev;
+            ev.events = EPOLLIN;
+            ev.data.fd = fd;
+            if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev) == -1)
+                throw std::runtime_error("epoll_ctl failed");
+        }
     }
 }
 

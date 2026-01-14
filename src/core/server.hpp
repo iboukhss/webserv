@@ -13,7 +13,7 @@
 
 class Server {
 public:
-    explicit Server(const ServerConfig& config);
+    explicit Server(const HttpConfig& config);
     ~Server();
 
     void init();
@@ -35,7 +35,7 @@ private:
     uint64_t add_connection(int client_fd, const sockaddr_in& addr);
     void close_connection(Client& conn);
 
-    const ServerConfig& config_;
+    const HttpConfig& config_;
 
     int epoll_fd_;
     std::vector<VirtualServer*> vservers_;
