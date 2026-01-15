@@ -13,6 +13,7 @@ ErrorHandler::ErrorHandler(const HttpResponse::Status code, const RouteConfig& r
 {
     res_ = HttpResponse::make_error(code, rc.shared.error_pages, req_);
     out_buf_ = res_.to_string();
+    LOG(DEBUG) << "ERROR HANDLER CONSTRUCTOR";
 }
 
 ErrorHandler::~ErrorHandler()

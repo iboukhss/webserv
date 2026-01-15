@@ -223,6 +223,7 @@ StaticFileHandler::StaticFileHandler(const std::string& path,
     res_ = HttpResponse::make_response_headers_only(
         HttpResponse::kStatusOk, file_type, file_size_, req_);
     out_buf_ = res_.to_string();
+    LOG(DEBUG) << "GET HANDLER CONSTRUCTOR";
 }
 
 StaticFileHandler::~StaticFileHandler()

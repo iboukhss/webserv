@@ -10,7 +10,10 @@
 
 #include <string>
 
+enum ReadHdr { kHdrComplete, kHdrNeedMore, kHdrFail };
+
 class CgiHandler : public Handler {
+
 public:
     CgiHandler(const std::string& path, const RouteConfig& rc, const HttpRequest& request);
     virtual ~CgiHandler();
@@ -19,29 +22,13 @@ public:
     virtual size_t write_input(const char* buf, size_t n);
 
     virtual bool is_regular_file() const { return false; }
-    virtual bool has_output() const;
+    virtual bool has_output() const { return out_off_ < out_buf_.size(); };
     virtual bool needs_input() const
     {
         return input_fd_[1] != -1 && bytes_written_body_ < body_length_;
     };
-    bool is_done() const
-    {
-        if (forced_response_) {
-            return !has_output();
-        }
-        // Progress child lifecycle
-        child_reaped();
+    virtual bool is_done() const;
 
-        // Close CGI stdout pipe exactly once, after draining everything
-        if (!forced_response_ && eoo_reached_ && headers_sent_ && output_body_.empty() &&
-            output_fd_[0] != -1) {
-            close(output_fd_[0]);
-            output_fd_[0] = -1;
-        }
-
-        // Final completion condition
-        return eoo_reached_ && !needs_input() && child_reaped_ && !has_output();
-    }
     const std::string& path() const { return path_; }
 
     virtual int cgi_read_fd() const { return output_fd_[0]; };
@@ -51,18 +38,21 @@ private:
     CgiHandler(const CgiHandler&);
     CgiHandler& operator=(const CgiHandler&);
 
-    void set_res_and_quit(HttpResponse::Status status);
-    std::vector<std::string> build_env_strings() const;
+    void set_error(HttpResponse::Status status);
     bool child_reaped(void) const;
-    bool parse_headers(std::string& cgi_headers, HttpResponse& res);
-    bool headers_sent() const { return headers_off_ == headers_.size(); }
 
     // constructor helper functions
     void init_state();
     bool validate_cgi_target(bool is_interpreter_cgi);
+    std::vector<std::string> build_env_strings() const;
     void build_exec_context(char** argv, bool is_interpreter_cgi);
     bool setup_pipes();
     void spawn_child(char** argv);
+
+    // read_output() helper functions
+    ReadHdr read_pipe_until_crlf_();
+    bool parse_headers();
+    size_t send_out_buf_(char* buf, size_t n);
 
     // constructor args
     const std::string path_;
@@ -70,6 +60,8 @@ private:
     const HttpRequest& req_;
     // Response built
     HttpResponse res_;
+    // pipe output buffer
+    std::string pipe_buf_;
     // Serialized response and offset
     std::string out_buf_;
     size_t out_off_;
@@ -77,12 +69,9 @@ private:
     std::vector<char*> envp_;
     std::vector<std::string> env_strings_;
 
-    // POST/GET - strings used to parse the cgi output
-    std::string raw_output_;
-    size_t headers_off_;
-    std::string headers_;
-    size_t output_body_off_;
+    // POST
     std::string output_body_;
+    size_t output_body_off_;
 
     // POST - body written to write end of the input_fd pipe
     size_t bytes_written_body_;
@@ -90,10 +79,9 @@ private:
 
     // boolean
     bool headers_parsed_;
-    bool headers_sent_;
-    bool eob_reached_;
-    bool eof_reached_;
-    bool eoo_reached_;
+    bool eob_reached_;         // end-of-body to mark the end of the body written to the pipe
+    bool eof_reached_;         // end-of-file for reading output from pipe
+    mutable bool eoo_reached_; // end-of-output
     bool forced_response_;
     mutable bool child_reaped_;
 

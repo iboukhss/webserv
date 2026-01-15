@@ -268,22 +268,29 @@ void Client::write_to_pipe()
 
 void Client::read_from_virtual_file()
 {
+    LOG(DEBUG) << "Client::read_from_virtual_file()";
+    LOG(DEBUG) << "!handler_->is_done() == " << !handler_->is_done();
+    // LOG(DEBUG) << "handler_->has_output() == " << handler_->has_output();
+    LOG(DEBUG) << "sendbuf_available_size() > 0 == " << (sendbuf_available_size() > 0);
+    int i = 0;
     char buf[4096];
-
-    while (!handler_->is_done() && handler_->has_output() && sendbuf_available_size() > 0) {
+    // while (!handler_->is_done() && handler_->has_output() && sendbuf_available_size() > 0) {
+    while (!handler_->is_done() && sendbuf_available_size() > 0) {
         size_t max = std::min(sizeof(buf), sendbuf_available_size());
         size_t n = handler_->read_output(buf, max);
-        if (n == 0) {
+        LOG(DEBUG) << "n == " << n;
+        if (n == 0 && i > 5) {
             break;
         }
+        i++;
         sendbuf_.append(buf, n);
     }
 }
 
 void Client::write_to_virtual_file()
 {
+    LOG(DEBUG) << "Client::write_to_virtual_file()";
     char buf[4096];
-
     while (!handler_->is_done() && handler_->needs_input() && parser_.has_body_chunk()) {
         size_t n = parser_.read_next_body_chunk(buf, sizeof(buf));
         size_t written = handler_->write_input(buf, n);
@@ -308,17 +315,22 @@ void Client::refresh_interest_list()
     }
     else if (state_ == Client::kProcessingRequest) {
         assert(handler_ != NULL);
-
-        if (handler_->needs_input()) {
+        LOG(DEBUG) << "Client::kProcessingRequest";
+        if (handler_->needs_input()) { // socket
             want_read(sockfd_);
         }
-        if (handler_->has_output()) {
+        // if (handler_->has_output()) { // socket
+        if (!sendbuf_.empty()) {
+            LOG(DEBUG) << "EPOLLOUT on socket fd";
             want_write(sockfd_);
         }
-        if (pipefd_[0] != -1 && handler_->has_output()) {
+        if (pipefd_[0] != -1) {
+            //&& handler_->has_output()) {
+            LOG(DEBUG) << "Client::kProcessingRequest => pipefd_[0] != -1 {want_read}";
             want_read(pipefd_[0]);
         }
         if (pipefd_[1] != -1 && handler_->needs_input()) {
+            LOG(DEBUG) << "Client::kProcessingRequest => pipefd_[0] != -1 {want_write}";
             want_write(pipefd_[1]);
         }
     }
@@ -328,6 +340,5 @@ void Client::refresh_interest_list()
     else {
         assert(0 && "UNREACHABLE");
     }
-
     epoll_fds_[sockfd_] |= EPOLLRDHUP;
 }

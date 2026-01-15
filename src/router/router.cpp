@@ -145,6 +145,7 @@ Handler* Router::handle_request(const HttpRequest& request) const
     std::string full_path = build_request_path(request, best_route);
 
     if (is_cgi_request(request, best_route)) {
+        LOG(DEBUG) << "routing to CgiHandler";
         return new CgiHandler(full_path, best_route, request);
     }
     if (request.method == "GET") {
