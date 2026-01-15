@@ -322,7 +322,7 @@ bool CgiHandler::is_done() const
     return eoo_reached_ && !needs_input() && (out_off_ >= out_buf_.size());
 }
 
-ReadHdr CgiHandler::read_pipe_until_crlf_()
+ReadHdr CgiHandler::read_pipe_until_crlf()
 {
     char tmp[4096];
     while (true) {
@@ -346,7 +346,7 @@ ReadHdr CgiHandler::read_pipe_until_crlf_()
     }
 }
 
-size_t CgiHandler::send_out_buf_(char* buf, size_t n)
+size_t CgiHandler::send_out_buf(char* buf, size_t n)
 {
     if (out_off_ >= out_buf_.size()) {
         return 0;
@@ -360,28 +360,28 @@ size_t CgiHandler::send_out_buf_(char* buf, size_t n)
 
 size_t CgiHandler::read_output(char* buf, size_t n)
 {
-    size_t sent = send_out_buf_(buf, n);
+    size_t sent = send_out_buf(buf, n);
     if (sent > 0)
         return sent;
 
     if (!headers_parsed_) {
-        ReadHdr r = read_pipe_until_crlf_();
+        ReadHdr r = read_pipe_until_crlf();
         if (r == kHdrNeedMore) {
             return 0; // @IBOUKH : HERE I NEED TO CHECK WITH YOU HOW TO HANDLE THIS IN THE CLIENT
         }
         if (r == kHdrFail) {
             set_error(HttpResponse::kStatusBadGateway);
-            return send_out_buf_(buf, n);
+            return send_out_buf(buf, n);
         }
 
         // r == kHdrComplete
         if (!parse_headers()) {
             set_error(HttpResponse::kStatusBadGateway);
-            return send_out_buf_(buf, n);
+            return send_out_buf(buf, n);
         }
 
         headers_parsed_ = true; // (or parse_headers sets this)
-        return send_out_buf_(buf, n);
+        return send_out_buf(buf, n);
     }
     // headers parsed: now read body
     char tmp[4096];
@@ -389,7 +389,7 @@ size_t CgiHandler::read_output(char* buf, size_t n)
         ssize_t bytes = read(output_fd_[0], tmp, sizeof(tmp));
         if (bytes > 0) {
             out_buf_.append(tmp, bytes);
-            return send_out_buf_(buf, n);
+            return send_out_buf(buf, n);
         }
         if (bytes == 0) {
             eof_reached_ = true;

@@ -50,9 +50,9 @@ private:
     void spawn_child(char** argv);
 
     // read_output() helper functions
-    ReadHdr read_pipe_until_crlf_();
+    ReadHdr read_pipe_until_crlf();
     bool parse_headers();
-    size_t send_out_buf_(char* buf, size_t n);
+    size_t send_out_buf(char* buf, size_t n);
 
     // constructor args
     const std::string path_;
