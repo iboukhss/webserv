@@ -272,17 +272,14 @@ void Client::read_from_virtual_file()
     LOG(DEBUG) << "!handler_->is_done() == " << !handler_->is_done();
     // LOG(DEBUG) << "handler_->has_output() == " << handler_->has_output();
     LOG(DEBUG) << "sendbuf_available_size() > 0 == " << (sendbuf_available_size() > 0);
-    int i = 0;
     char buf[4096];
     // while (!handler_->is_done() && handler_->has_output() && sendbuf_available_size() > 0) {
     while (!handler_->is_done() && sendbuf_available_size() > 0) {
         size_t max = std::min(sizeof(buf), sendbuf_available_size());
         size_t n = handler_->read_output(buf, max);
-        LOG(DEBUG) << "n == " << n;
-        if (n == 0 && i > 5) {
+        if (n == 0) {
             break;
         }
-        i++;
         sendbuf_.append(buf, n);
     }
 }
@@ -290,6 +287,9 @@ void Client::read_from_virtual_file()
 void Client::write_to_virtual_file()
 {
     LOG(DEBUG) << "Client::write_to_virtual_file()";
+    LOG(DEBUG) << "!handler_->is_done() == " << !handler_->is_done();
+    LOG(DEBUG) << "handler_->needs_input() == " << handler_->needs_input();
+    LOG(DEBUG) << "parser_.has_body_chunk() == " << parser_.has_body_chunk();
     char buf[4096];
     while (!handler_->is_done() && handler_->needs_input() && parser_.has_body_chunk()) {
         size_t n = parser_.read_next_body_chunk(buf, sizeof(buf));
@@ -316,6 +316,8 @@ void Client::refresh_interest_list()
     else if (state_ == Client::kProcessingRequest) {
         assert(handler_ != NULL);
         LOG(DEBUG) << "Client::kProcessingRequest";
+        // IMPORTANT: refresh pipefd_[] from handler (it may have closed stdin)
+        sync_pipe_fds_from_handler();
         if (handler_->needs_input()) { // socket
             want_read(sockfd_);
         }
@@ -324,8 +326,7 @@ void Client::refresh_interest_list()
             LOG(DEBUG) << "EPOLLOUT on socket fd";
             want_write(sockfd_);
         }
-        if (pipefd_[0] != -1) {
-            //&& handler_->has_output()) {
+        if (pipefd_[0] != -1 && !handler_->is_done()) {
             LOG(DEBUG) << "Client::kProcessingRequest => pipefd_[0] != -1 {want_read}";
             want_read(pipefd_[0]);
         }
@@ -341,4 +342,36 @@ void Client::refresh_interest_list()
         assert(0 && "UNREACHABLE");
     }
     epoll_fds_[sockfd_] |= EPOLLRDHUP;
+}
+
+void Client::sync_pipe_fds_from_handler()
+{
+    if (!handler_)
+        return;
+
+    int new_r = handler_->cgi_read_fd();
+    int new_w = handler_->cgi_write_fd();
+
+    // If handler closed stdout pipe (read end), remove old from interest list
+    if (pipefd_[0] != -1 && new_r == -1) {
+        epoll_fds_.erase(pipefd_[0]);
+    }
+    // If handler changed fd (rare but possible), update map key
+    else if (pipefd_[0] != -1 && new_r != -1 && pipefd_[0] != new_r) {
+        uint32_t mask = epoll_fds_[pipefd_[0]];
+        epoll_fds_.erase(pipefd_[0]);
+        epoll_fds_[new_r] = mask;
+    }
+    pipefd_[0] = new_r;
+
+    // Same for stdin pipe (write end)
+    if (pipefd_[1] != -1 && new_w == -1) {
+        epoll_fds_.erase(pipefd_[1]);
+    }
+    else if (pipefd_[1] != -1 && new_w != -1 && pipefd_[1] != new_w) {
+        uint32_t mask = epoll_fds_[pipefd_[1]];
+        epoll_fds_.erase(pipefd_[1]);
+        epoll_fds_[new_w] = mask;
+    }
+    pipefd_[1] = new_w;
 }
