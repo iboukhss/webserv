@@ -10,6 +10,8 @@
 
 struct HttpResponse {
 public:
+    // NOTE: Don't forget to update kStatusTable after adding new status codes
+    // below.
     enum Status {
         kStatusNone = 0, // Sentinel value for initialization, never sent
         kStatusOk = 200,
@@ -22,6 +24,9 @@ public:
         kStatusNotFound = 404,
         kStatusMethodNotAllowed = 405,
         kStatusConflict = 409,
+        kStatusContentTooLarge = 413,
+        kStatusUriTooLong = 431,
+        kStatusRequestHeaderFieldsTooLarge = 431,
         kStatusInternalServerError = 500,
         kStatusNotImplemented = 501,
         kStatusBadGateway = 502,

@@ -25,6 +25,8 @@ struct HttpStatusInfo {
     const char* reason;
 };
 
+// Ref: https://developer.mozilla.org/fr/docs/Web/HTTP/Reference/Status
+
 /* clang-format off */
 static const HttpStatusInfo kStatusTable[] = {
     { 200, "OK" },
@@ -37,6 +39,9 @@ static const HttpStatusInfo kStatusTable[] = {
     { 404, "Not Found" },
     { 405, "Method Not Allowed" },
     { 409, "Conflict" },
+    { 413, "Content Too Large" },
+    { 414, "URI Too Long"},
+    { 431, "Request Header Fields Too Large"},
     { 500, "Internal Server Error" },
     { 501, "Not Implemented" },
     { 502, "Bad Gateway"},
@@ -68,23 +73,11 @@ HttpResponse::Status HttpResponse::parse_status(const std::string& s)
 
 HttpResponse::Status HttpResponse::status_from_int(int code)
 {
-    switch (code) {
-    case 200: return HttpResponse::kStatusOk;
-    case 201: return HttpResponse::kStatusCreated;
-    case 204: return HttpResponse::kStatusNoContent;
-    case 301: return HttpResponse::kStatusMovedPermanently;
-    case 302: return HttpResponse::kStatusFound;
-    case 400: return HttpResponse::kStatusBadRequest;
-    case 403: return HttpResponse::kStatusForbidden;
-    case 404: return HttpResponse::kStatusNotFound;
-    case 405: return HttpResponse::kStatusMethodNotAllowed;
-    case 409: return HttpResponse::kStatusConflict;
-    case 500: return HttpResponse::kStatusInternalServerError;
-    case 501: return HttpResponse::kStatusNotImplemented;
-    case 502: return HttpResponse::kStatusBadGateway;
-    case 507: return HttpResponse::kStatusDiskFull;
-    default:  return HttpResponse::kStatusInternalServerError;
+    for (size_t i = 0; i < sizeof(kStatusTable) / sizeof(kStatusTable[0]); i++) {
+        if (kStatusTable[i].code == code)
+            return static_cast<HttpResponse::Status>(code);
     }
+    return HttpResponse::kStatusNone;
 }
 
 std::string HttpResponse::to_string() const
