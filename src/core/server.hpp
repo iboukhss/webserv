@@ -20,20 +20,17 @@ public:
     void run();
 
 private:
-    Server(const Server& other);
-    Server& operator=(const Server& other);
+    Server(const Server&);
+    Server& operator=(const Server&);
 
     void accept_connection(int fd);
+    void close_connection(Client& conn);
     void handle_events(int fd, uint32_t events);
-    void read_from_socket(Client& conn);
-    void write_to_socket(Client& conn);
     void update_interest_list(Client& conn);
 
+    Client& get_client(int fd);
     bool is_listen_fd(int fd) const;
     bool is_client_fd(int fd) const;
-    Client& get_client(int fd);
-    uint64_t add_connection(int client_fd, const sockaddr_in& addr);
-    void close_connection(Client& conn);
 
     const HttpConfig& config_;
 

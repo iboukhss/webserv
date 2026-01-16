@@ -11,16 +11,16 @@
 #include <cstring>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 
 UploadHandler::UploadHandler(const std::string& path, const RouteConfig& rc, const HttpRequest& req)
     : path_(path),
       rc_(rc),
       req_(req),
-      out_off_(0),
-      bytes_written_(0),
+      total_bytes_written_(0),
       fd_(-1),
-      done_(false)
-
+      is_upload_finished_(false),
+      has_error_(false)
 {
     if (req.content_length == 0) {
         // set_error(HttpResponse::kStatusBadRequest);
@@ -46,50 +46,75 @@ UploadHandler::~UploadHandler()
         close(fd_);
 }
 
+bool UploadHandler::has_output() const
+{
+    return !out_buf_.empty();
+}
+
+bool UploadHandler::needs_input() const
+{
+    return !has_error_ && !is_upload_finished_ && total_bytes_written_ < req_.content_length;
+}
+
+bool UploadHandler::is_done() const
+{
+    return !needs_input() && !has_output();
+}
+
 size_t UploadHandler::read_output(char* buf, size_t n)
 {
-    if (out_off_ >= out_buf_.size()) {
+    if (!has_output()) {
+        LOG(WARN) << "Tried to read 0 bytes from UploadHandler";
         return 0;
     }
-    size_t bytes_left = out_buf_.size() - out_off_;
-    size_t to_copy = std::min(bytes_left, n);
-    std::memcpy(buf, out_buf_.data() + out_off_, to_copy);
-    out_off_ += to_copy;
-    return (to_copy);
+
+    size_t to_copy = std::min(out_buf_.size(), n);
+    std::memcpy(buf, out_buf_.data(), to_copy);
+    out_buf_.erase(0, to_copy);
+
+    return to_copy;
 }
 
 size_t UploadHandler::write_input(const char* buf, size_t n)
 {
-    ssize_t bytes = write(fd_, buf, n);
-    if (bytes == 0) {
-        // should never happen ?
-    }
-    if (bytes < 0) {
-        if (out_buf_.empty()) {
-            set_error(HttpResponse::kStatusDiskFull);
-        }
-        done_ = true; // to ensure needs_input returns false
+    if (!needs_input()) {
+        LOG(WARN) << "Tried to write 0 bytes to UploadHandler";
         return 0;
     }
-    bytes_written_ += bytes;
-    if (bytes_written_ < rc_.shared.max_body_size && bytes_written_ < req_.content_length) {
-        return (bytes);
+    if (total_bytes_written_ + n > rc_.shared.max_body_size) {
+        set_error(HttpResponse::kStatusContentTooLarge);
+        return 0;
     }
-    if (bytes_written_ >= rc_.shared.max_body_size) {
-        if (out_buf_.empty())
-            set_error(HttpResponse::kStatusBadRequest);
+
+    ssize_t written = write(fd_, buf, n);
+    if (written == -1) {
+        set_error(HttpResponse::kStatusInternalServerError);
+        return 0;
     }
-    if (out_buf_.empty()) {
-        res_ = HttpResponse::make_response_headers_only(HttpResponse::kStatusCreated, "", 0, req_);
-        out_buf_ = res_.to_string();
-        done_ = true;
+    if (written == 0) {
+        return 0;
     }
-    return (0);
+
+    assert(static_cast<size_t>(written) == n && "Partial write on regular file??");
+
+    total_bytes_written_ += written;
+
+    if (total_bytes_written_ == req_.content_length) {
+        finalize_upload();
+    }
+    return written;
 }
 
 void UploadHandler::set_error(const HttpResponse::Status code)
 {
     res_ = HttpResponse::make_error(code, rc_.shared.error_pages, req_);
     out_buf_ = res_.to_string();
-    done_ = true;
+    has_error_ = true;
+}
+
+void UploadHandler::finalize_upload()
+{
+    res_ = HttpResponse::make_response_headers_only(HttpResponse::kStatusCreated, "", 0, req_);
+    out_buf_ = res_.to_string();
+    is_upload_finished_ = true;
 }

@@ -120,7 +120,7 @@ static void print_raw_data(const char* s, size_t n)
             std::cout.put(c);
         }
     }
-    std::cout.flush();
+    std::cout << "\n";
 }
 
 void Client::read_from_socket()

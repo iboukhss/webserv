@@ -14,23 +14,23 @@ public:
     explicit UploadHandler(const std::string& path, const RouteConfig& rc, const HttpRequest& req);
     virtual ~UploadHandler();
 
-    virtual size_t read_output(char* buf, size_t n); // we should not read from this handler
+    virtual size_t read_output(char* buf, size_t n);
     virtual size_t write_input(const char* buf, size_t n);
 
     virtual bool is_regular_file() const { return true; }
-    virtual bool has_output() const { return out_off_ < out_buf_.size(); }
-    virtual bool needs_input() const { return bytes_written_ < req_.content_length; }
-    virtual bool is_done() const { return done_ && out_off_ >= out_buf_.size(); }
+    virtual bool has_output() const;
+    virtual bool needs_input() const;
+    virtual bool is_done() const;
 
     virtual int cgi_read_fd() const { return -1; }
     virtual int cgi_write_fd() const { return -1; }
 
-    const std::string& path() const { return path_; } // still required ?
-
 private:
     UploadHandler(const UploadHandler&);
     UploadHandler& operator=(const UploadHandler&);
+
     void set_error(const HttpResponse::Status code);
+    void finalize_upload();
 
     // constructor args
     const std::string& path_;
@@ -40,11 +40,11 @@ private:
     HttpResponse res_;
     // Serialized response and offset
     std::string out_buf_;
-    size_t out_off_;
     // other handler specifc variables
-    size_t bytes_written_;
+    size_t total_bytes_written_;
     int fd_;
-    bool done_;
+    bool is_upload_finished_;
+    bool has_error_;
 };
 
 #endif

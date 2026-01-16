@@ -48,7 +48,7 @@ void Server::init()
 {
     epoll_fd_ = epoll_create1(0);
     if (epoll_fd_ == -1)
-        throw std::runtime_error("epoll_create1 failed");
+        throw std::runtime_error("Server::init: epoll_create1 failed");
 
     for (size_t i = 0; i < config_.servers.size(); i++) {
         const ServerConfig& sconf = config_.servers[i];
@@ -59,7 +59,7 @@ void Server::init()
         for (size_t j = 0; j < sconf.listen_addrs.size(); j++) {
             int fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
             if (fd == -1)
-                throw std::runtime_error("socket failed");
+                throw std::runtime_error("Server::init: socket failed");
 
             int yes = 1;
             setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
@@ -67,10 +67,10 @@ void Server::init()
             const sockaddr_in& addr = sconf.listen_addrs[j];
 
             if (bind(fd, (sockaddr*) &addr, sizeof(addr)) == -1)
-                throw std::runtime_error("bind failed");
+                throw std::runtime_error("Server::init: bind failed");
 
             if (listen(fd, WEBSERV_DEFAULT_MAX_PENDING_CONNECTIONS) == -1)
-                throw std::runtime_error("listen failed");
+                throw std::runtime_error("Server::init: listen failed");
 
             listen_fds_.push_back(fd);
             server_map_[fd] = vs;
@@ -79,7 +79,7 @@ void Server::init()
             ev.events = EPOLLIN;
             ev.data.fd = fd;
             if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev) == -1)
-                throw std::runtime_error("epoll_ctl failed");
+                throw std::runtime_error("Server::init: EPOLL_CTL_ADD failed");
         }
     }
 }
@@ -96,7 +96,7 @@ void Server::accept_connection(int fd)
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
             return;
         }
-        throw std::runtime_error("accept4 failed");
+        throw std::runtime_error("Server::accept_connection: accept4 failed");
     }
 
     VirtualServer* vs = server_map_[fd];
@@ -109,7 +109,7 @@ void Server::accept_connection(int fd)
     ev.events = EPOLLRDHUP | EPOLLIN;
     ev.data.fd = client_fd;
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, client_fd, &ev) == -1) {
-        throw std::runtime_error("EPOLL_CTL_ADD failed");
+        throw std::runtime_error("Server::accept_connection: EPOLL_CTL_ADD failed");
     }
 
     LOG(DEBUG) << "Client #" << client_fd << ": connection accepted";
@@ -124,7 +124,7 @@ void Server::close_connection(Client& client)
         int fd = it->first;
 
         if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, NULL) == -1)
-            throw std::runtime_error("EPOLL_CTL_DEL failed");
+            throw std::runtime_error("Server::close_connection: EPOLL_CTL_DEL failed");
 
         client_map_.erase(fd);
     }
@@ -144,7 +144,7 @@ void Server::close_connection(Client& client)
 Client& Server::get_client(int fd)
 {
     if (client_map_.count(fd) == 0)
-        throw std::runtime_error("Attempted to retrieve invalid client fd");
+        throw std::runtime_error("Server::get_client: Attempted to retrieve invalid client fd");
 
     return *client_map_[fd];
 }
@@ -160,12 +160,7 @@ bool Server::is_listen_fd(int fd) const
 
 bool Server::is_client_fd(int fd) const
 {
-    for (std::map<int, Client*>::const_iterator it = client_map_.begin(); it != client_map_.end();
-         ++it) {
-        if (it->first == fd)
-            return true;
-    }
-    return false;
+    return client_map_.find(fd) != client_map_.end();
 }
 
 void Server::run()
@@ -178,7 +173,7 @@ void Server::run()
             if (errno == EINTR) {
                 continue;
             }
-            throw std::runtime_error("epoll_wait failed");
+            throw std::runtime_error("Server::run: epoll_wait failed");
         }
 
         for (int i = 0; i < n_events; ++i) {
@@ -192,7 +187,7 @@ void Server::run()
                 handle_events(fd, ev);
             }
             else {
-                // FD was removed from our client list?
+                LOG(WARN) << "File descriptor: " << fd << " not tracked anymore";
                 continue;
             }
         }
@@ -238,21 +233,25 @@ void Server::update_interest_list(Client& client)
         ev.events = mask;
 
         if (client_map_.count(fd) == 0) {
+
             if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev) == -1) {
-                throw std::runtime_error("EPOLL_CTL_ADD failed");
+                throw std::runtime_error("Server::update_interest_list: EPOLL_CTL_ADD failed");
             }
+
             client_map_[fd] = &client;
         }
         else {
             if (mask == 0) {
+                /*
                 if (epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, &ev) == -1) {
-                    throw std::runtime_error("EPOLL_CTL_DEL failed");
+                    throw std::runtime_error("Server::update_interest_list: EPOLL_CTL_DEL failed");
                 }
+                */
                 client_map_.erase(fd);
             }
             else {
                 if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, fd, &ev) == -1) {
-                    throw std::runtime_error("EPOLL_CTL_MOD failed");
+                    throw std::runtime_error("Server::update_interest_list: EPOLL_CTL_MOD failed");
                 }
             }
         }
