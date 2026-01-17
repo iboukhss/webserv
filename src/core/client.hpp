@@ -55,7 +55,6 @@ private:
     void write_to_pipe();
 
     void refresh_interest_list();
-    void sync_pipe_fds_from_handler();
 
     int sockfd_;
     int pipefd_[2];
