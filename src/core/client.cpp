@@ -254,7 +254,16 @@ void Client::read_from_pipe()
     assert(handler_ != NULL);
     assert(handler_->cgi_read_fd() != -1);
 
-    read_from_virtual_file();
+    char buf[8192];
+
+    while (!handler_->is_done() && sendbuf_available_size() > 0) {
+        size_t max = std::min(sizeof(buf), sendbuf_available_size());
+        size_t n = handler_->read_output(buf, max);
+        if (n == 0) {
+            break;
+        }
+        sendbuf_.append(buf, n);
+    }
 }
 
 void Client::write_to_pipe()
@@ -309,17 +318,23 @@ void Client::refresh_interest_list()
     else if (state_ == Client::kProcessingRequest) {
         assert(handler_ != NULL);
 
-        if (handler_->needs_input()) {
-            want_read(sockfd_);
+        if (handler_->is_regular_file()) {
+            if (handler_->needs_input()) {
+                want_read(sockfd_);
+            }
+            if (handler_->has_output()) {
+                want_write(sockfd_);
+            }
         }
-        if (handler_->has_output()) {
-            want_write(sockfd_);
-        }
-        if (pipefd_[0] != -1 && handler_->has_output()) {
-            want_read(pipefd_[0]);
-        }
-        if (pipefd_[1] != -1 && handler_->needs_input()) {
-            want_write(pipefd_[1]);
+        else {
+            if (handler_->cgi_read_fd() != -1) {
+                want_read(pipefd_[0]);
+                want_write(sockfd_);
+            }
+            if (handler_->cgi_write_fd() != -1) {
+                want_write(pipefd_[1]);
+                want_read(sockfd_);
+            }
         }
     }
     else if (state_ == Client::kPreparingNextRequest) {

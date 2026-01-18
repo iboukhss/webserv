@@ -199,17 +199,17 @@ void Server::handle_events(int fd, uint32_t events)
 {
     Client& client = get_client(fd);
 
-    if (events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
-        LOG(ERROR) << "Client #" << client.fd() << ": EPOLLRDHUP - peer closed connection";
-        close_connection(client);
-        return;
-    }
-
     if (events & EPOLLIN) {
         client.on_epollin(fd);
     }
     if (events & EPOLLOUT) {
         client.on_epollout(fd);
+    }
+
+    if (fd == client.fd() && events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
+        LOG(ERROR) << "Client #" << client.fd() << ": EPOLLRDHUP - peer closed connection";
+        close_connection(client);
+        return;
     }
 
     if (client.should_close()) {
